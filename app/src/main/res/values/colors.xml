@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary color palette - Dark theme with purple accent -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Background colors -->
+    <color name="background_dark">#FF121212</color>
+    <color name="background_surface">#FF1E1E1E</color>
+    <color name="background_card">#FF252525</color>
+    <color name="background_elevated">#FF2D2D2D</color>
+    
+    <!-- Primary accent colors -->
+    <color name="primary">#FF8B5CF6</color>
+    <color name="primary_variant">#FF7C3AED</color>
+    <color name="primary_light">#FFA78BFA</color>
+    <color name="primary_dark">#FF6D28D9</color>
+    
+    <!-- Secondary accent -->
+    <color name="secondary">#FF06B6D4</color>
+    <color name="secondary_variant">#FF0891B2</color>
+    
+    <!-- Text colors -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB3B3B3</color>
+    <color name="text_disabled">#FF666666</color>
+    <color name="text_on_primary">#FFFFFFFF</color>
+    
+    <!-- Status colors -->
+    <color name="success">#FF22C55E</color>
+    <color name="warning">#FFFBBF24</color>
+    <color name="error">#FFEF4444</color>
+    
+    <!-- Control colors -->
+    <color name="switch_track_on">#FF8B5CF6</color>
+    <color name="switch_track_off">#FF3D3D3D</color>
+    <color name="switch_thumb">#FFFFFFFF</color>
+    
+    <!-- Level meter colors -->
+    <color name="meter_bass">#FF8B5CF6</color>
+    <color name="meter_mid">#FF06B6D4</color>
+    <color name="meter_high">#FF22C55E</color>
+    <color name="meter_background">#FF3D3D3D</color>
+    
+    <!-- Button colors -->
+    <color name="button_primary">#FF8B5CF6</color>
+    <color name="button_secondary">#FF3D3D3D</color>
+    <color name="button_text">#FFFFFFFF</color>
+    
+    <!-- Divider -->
+    <color name="divider">#FF3D3D3D</color>
+</resources>

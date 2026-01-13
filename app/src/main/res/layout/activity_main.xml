@@ -1,0 +1,567 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootScroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:overScrollMode="ifContentScrolls"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/rootLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- ====== CONNECTION STATUS CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_modern"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Not Connected"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:paddingBottom="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnScanConnect"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="48dp"
+                    android:background="@drawable/btn_primary"
+                    android:text="Connect"
+                    android:textColor="@color/text_on_primary"
+                    android:textAllCaps="false"
+                    android:textSize="15sp" />
+
+                <Space android:layout_width="12dp" android:layout_height="wrap_content" />
+
+                <Button
+                    android:id="@+id/btnOtherDevice"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="48dp"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Other Device"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ====== LED EFFECTS CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_modern"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="LED EFFECTS"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="12dp" />
+
+            <Spinner
+                android:id="@+id/spinnerLedEffect"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_secondary"
+                android:padding="12dp"
+                android:popupBackground="@color/background_elevated" />
+        </LinearLayout>
+
+        <!-- ====== AUDIO LEVELS CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_modern"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="AUDIO LEVELS"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="16dp" />
+
+            <TextView
+                android:id="@+id/tvLevels"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Waiting for audio..."
+                android:textColor="@color/text_disabled"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- 30 Hz Bass -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="30 Hz"
+                    android:textSize="13sp"
+                    android:textColor="@color/meter_bass"
+                    android:textStyle="bold" />
+
+                <ProgressBar
+                    android:id="@+id/bar30"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="8dp"
+                    android:max="120"
+                    android:progressDrawable="@drawable/progress_meter_bass" />
+
+                <TextView
+                    android:id="@+id/tvVal30"
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- 60 Hz Mid -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="60 Hz"
+                    android:textSize="13sp"
+                    android:textColor="@color/meter_mid"
+                    android:textStyle="bold" />
+
+                <ProgressBar
+                    android:id="@+id/bar60"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="8dp"
+                    android:max="120"
+                    android:progressDrawable="@drawable/progress_meter_mid" />
+
+                <TextView
+                    android:id="@+id/tvVal60"
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- 100 Hz High -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="100 Hz"
+                    android:textSize="13sp"
+                    android:textColor="@color/meter_high"
+                    android:textStyle="bold" />
+
+                <ProgressBar
+                    android:id="@+id/bar100"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="8dp"
+                    android:max="120"
+                    android:progressDrawable="@drawable/progress_meter_high" />
+
+                <TextView
+                    android:id="@+id/tvVal100"
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:gravity="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ====== DSP CONTROLS CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_modern"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DSP CONTROLS"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="16dp" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchBassBoost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bass Boost"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:paddingVertical="8dp"
+                app:trackTint="@color/switch_track_on" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchChannelFlip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Channel Flip"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:paddingVertical="8dp"
+                app:trackTint="@color/switch_track_on" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchBypass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bypass DSP"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:paddingVertical="8dp"
+                app:trackTint="@color/switch_track_on" />
+        </LinearLayout>
+
+        <!-- ====== EQUALIZER CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_modern"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="EQUALIZER"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="16dp" />
+
+            <!-- Bass -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="Bass"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <SeekBar
+                    android:id="@+id/seekBass"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:max="24"
+                    android:progress="12"
+                    android:progressTint="@color/primary"
+                    android:thumbTint="@color/primary" />
+
+                <TextView
+                    android:id="@+id/tvBassLabel"
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Mid -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="Mid"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <SeekBar
+                    android:id="@+id/seekMid"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:max="24"
+                    android:progress="12"
+                    android:progressTint="@color/secondary"
+                    android:thumbTint="@color/secondary" />
+
+                <TextView
+                    android:id="@+id/tvMidLabel"
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Treble -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="Treble"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <SeekBar
+                    android:id="@+id/seekTreble"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:max="24"
+                    android:progress="12"
+                    android:progressTint="@color/success"
+                    android:thumbTint="@color/success" />
+
+                <TextView
+                    android:id="@+id/tvTrebleLabel"
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="0 dB"
+                    android:textColor="@color/success"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ====== DEVICE SETTINGS CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_modern"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DEVICE SETTINGS"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Device Name"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:paddingBottom="4dp" />
+
+            <EditText
+                android:id="@+id/etDeviceName"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_secondary"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_disabled"
+                android:hint="BDK SPEAKER"
+                android:imeOptions="actionDone"
+                android:textSize="15sp"
+                android:paddingHorizontal="16dp"
+                android:inputType="text" />
+
+            <Button
+                android:id="@+id/btnApplyName"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_primary"
+                android:text="Apply Name"
+                android:textColor="@color/text_on_primary"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:layout_marginTop="12dp" />
+        </LinearLayout>
+
+        <!-- ====== FIRMWARE UPDATE CARD ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_modern"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="FIRMWARE UPDATE"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="16dp" />
+
+            <!-- OTA Progress Bar -->
+            <ProgressBar
+                android:id="@+id/progressOta"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/primary"
+                android:progressBackgroundTint="@color/background_elevated"
+                android:visibility="gone"
+                android:layout_marginBottom="12dp" />
+
+            <!-- OTA Status Text -->
+            <TextView
+                android:id="@+id/tvOtaStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone"
+                android:paddingBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSelectFirmware"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Select File"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="15sp" />
+
+                <Space android:layout_width="12dp" android:layout_height="wrap_content" />
+
+                <Button
+                    android:id="@+id/btnStartOta"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_primary"
+                    android:text="Start OTA"
+                    android:textColor="@color/text_on_primary"
+                    android:textAllCaps="false"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ====== INFO BUTTONS ====== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <Button
+                android:id="@+id/btnAppInfo"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_secondary"
+                android:text="App Info"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+
+            <Space android:layout_width="12dp" android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/btnDeviceInfo"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_secondary"
+                android:text="Device Info"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
+

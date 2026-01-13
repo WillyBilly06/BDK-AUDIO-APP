@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BDK Audio</string>
+    <string name="scan_and_connect">Scan &amp; Connect</string>
+</resources>

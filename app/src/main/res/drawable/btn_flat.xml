@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Use your theme primary color -->
+    <solid android:color="?attr/colorPrimary" />
+
+    <!-- Make corners only slightly rounded -->
+    <corners android:radius="12dp" />
+
+    <!-- Some padding so the touch target looks nice -->
+    <padding
+        android:left="12dp"
+        android:top="8dp"
+        android:right="12dp"
+        android:bottom="8dp" />
+</shape>
