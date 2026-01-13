@@ -14,21 +14,21 @@ BDK Audio App provides a comprehensive control interface for managing Bluetooth 
 
 ## Features
 
-### 🔗 Bluetooth Connectivity
+###  Bluetooth Connectivity
 - BLE device scanning with service UUID filtering
 - Automatic MTU negotiation (up to 517 bytes for fast OTA)
 - Real-time connection status monitoring
 - Switch between multiple devices
 - Reads current device settings on connect (EQ, DSP toggles, LED effect)
 
-### 🎛️ DSP Control
+###  DSP Control
 - **Bass Boost**: Toggle hardware bass enhancement
 - **Channel Flip**: Swap left/right audio channels
 - **EQ Bypass**: Bypass all DSP processing
 - **3-Band Equalizer**: Adjustable Bass, Mid, and Treble (-12 to +12 dB)
 - Real-time audio level meters (30 Hz, 60 Hz, 100 Hz bands)
 
-### 💡 LED Effects (21 Modes)
+###  LED Effects (21 Modes)
 Choose from 21 audio-reactive visualization effects for the 16x16 WS2812B LED matrix:
 
 | ID | Effect | ID | Effect | ID | Effect |
@@ -41,19 +41,19 @@ Choose from 21 audio-reactive visualization effects for the 16x16 WS2812B LED ma
 | 5 | Matrix Rain | 12 | Kaleidoscope | 19 | Bouncing Balls |
 | 6 | VU Meter | 13 | Frequency Spiral | 20 | Lava Lamp |
 
-### 📝 Device Management
+###  Device Management
 - Rename your ESP32 speaker (persisted in NVS)
 - View current firmware version
 - Device info screen with connection details
 
-### 📲 Over-the-Air Firmware Updates
+###  Over-the-Air Firmware Updates
 - Select firmware binary (.bin) from device storage
 - High-speed BLE transfer using Write-No-Response
 - Real-time progress bar with KB transferred
 - Progress-based throttling for reliable transfers
 - Automatic ESP32 reboot on completion
 
-### 🎨 User Interface
+###  User Interface
 - Modern dark theme with Material Design 3 components
 - Card-based responsive layout
 - Edge-to-edge display with proper inset handling
