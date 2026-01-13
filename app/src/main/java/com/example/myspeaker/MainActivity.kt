@@ -214,8 +214,9 @@ class MainActivity : AppCompatActivity() {
         val btnDeviceInfo = findViewById<Button>(R.id.btnDeviceInfo)
         btnDeviceInfo.setOnClickListener {
             val intent = Intent(this, DeviceInfoActivity::class.java)
-            intent.putExtra("device_name", currentDeviceNameStr)
-            intent.putExtra("fw_version", currentFirmwareVersion)
+            intent.putExtra("device_name", if (isConnected) currentDeviceNameStr else "Unknown")
+            intent.putExtra("fw_version", if (isConnected) currentFirmwareVersion else "Unknown")
+            intent.putExtra("is_connected", isConnected)
             startActivity(intent)
         }
         btnStartOta.setOnClickListener {
@@ -525,6 +526,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     tvStatus.text = "Not Connected"
                     btnScanConnect.text = "Connect"
+                    resetUiToDefaults()
                 }
             }
         }
@@ -879,6 +881,53 @@ class MainActivity : AppCompatActivity() {
         isOtaInProgress = false
         tvStatus.text = "Not Connected"
         btnScanConnect.text = "Connect"
+        resetUiToDefaults()
+    }
+
+    private fun resetUiToDefaults() {
+        // Reset state variables
+        currentDeviceNameStr = "Unknown"
+        currentFirmwareVersion = "Unknown"
+        lastDeviceName = "Unknown"
+        lastFirmwareVersion = "Unknown"
+
+        // Reset level meters to 0
+        bar30.progress = 0
+        bar60.progress = 0
+        bar100.progress = 0
+        tvVal30.text = "0 dB"
+        tvVal60.text = "0 dB"
+        tvVal100.text = "0 dB"
+
+        // Reset DSP controls to defaults (all off)
+        updatingFromDevice = true
+        try {
+            switchBass.isChecked = false
+            switchFlip.isChecked = false
+            switchBypass.isChecked = false
+        } finally {
+            updatingFromDevice = false
+        }
+
+        // Reset EQ to 0 dB (center position = 12)
+        seekBass.progress = 12
+        seekMid.progress = 12
+        seekTreble.progress = 12
+        tvBassLabel.text = "0 dB"
+        tvMidLabel.text = "0 dB"
+        tvTrebleLabel.text = "0 dB"
+
+        // Reset device name field
+        etDeviceName.setText("")
+        etDeviceName.hint = "Device Name"
+
+        // Reset LED effect spinner to first item
+        updatingFromDevice = true
+        try {
+            spinnerLedEffect.setSelection(0)
+        } finally {
+            updatingFromDevice = false
+        }
     }
 
     // ========= SEND DATA =========

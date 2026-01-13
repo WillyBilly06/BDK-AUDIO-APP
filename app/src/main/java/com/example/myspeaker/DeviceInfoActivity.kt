@@ -21,20 +21,20 @@ class DeviceInfoActivity : AppCompatActivity() {
         val statusIndicator = findViewById<View>(R.id.statusIndicator)
 
         // Read values that MainActivity put into the Intent
-        val deviceName = intent.getStringExtra("device_name") ?: "Unknown"
-        val fwVersion  = intent.getStringExtra("fw_version") ?: "Unknown"
+        val isConnected = intent.getBooleanExtra("is_connected", false)
+        val deviceName = if (isConnected) intent.getStringExtra("device_name") ?: "Unknown" else "Unknown"
+        val fwVersion  = if (isConnected) intent.getStringExtra("fw_version") ?: "Unknown" else "Unknown"
 
         tvDeviceName.text = deviceName
         tvFirmwareVersion.text = fwVersion
 
-        // Update connection status based on device name
-        val isConnected = deviceName != "Unknown" && deviceName.isNotEmpty()
+        // Update connection status based on is_connected flag
         if (isConnected) {
             tvConnectionStatus.text = "Connected"
             tvConnectionStatus.setTextColor(getColor(R.color.success))
             statusIndicator.setBackgroundResource(R.drawable.status_dot_connected)
         } else {
-            tvConnectionStatus.text = "Not Connected"
+            tvConnectionStatus.text = "Disconnected"
             tvConnectionStatus.setTextColor(getColor(R.color.error))
             statusIndicator.setBackgroundResource(R.drawable.status_dot_disconnected)
         }
