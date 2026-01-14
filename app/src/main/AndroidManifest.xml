@@ -40,12 +40,21 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- For BLE scanning on newer Android -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <!-- For BLE scanning on Android 12+ (no location needed) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" 
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    
+    <!-- For modifying audio settings -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-    <!-- For older Android to allow scanning -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- For older Android (API < 31) to allow BLE scanning -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <!-- For Companion Device Manager (required for codec control on Android 16+) -->
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
 
 </manifest>
 

@@ -120,6 +120,54 @@
                 android:popupBackground="@color/background_elevated" />
         </LinearLayout>
 
+        <!-- ====== BLUETOOTH CODEC CARD ====== -->
+        <LinearLayout
+            android:id="@+id/codecCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_modern"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="BLUETOOTH CODEC"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Connect speaker via Bluetooth first"
+                android:textSize="11sp"
+                android:textColor="@color/text_disabled"
+                android:paddingBottom="12dp" />
+
+            <Spinner
+                android:id="@+id/spinnerCodec"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_secondary"
+                android:padding="12dp"
+                android:popupBackground="@color/background_elevated" />
+
+            <Button
+                android:id="@+id/btnAssociateDevice"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="8dp"
+                android:text="Associate Device (for codec control)"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:background="@drawable/btn_secondary"
+                android:visibility="gone" />
+        </LinearLayout>
+
         <!-- ====== AUDIO LEVELS CARD ====== -->
         <LinearLayout
             android:layout_width="match_parent"

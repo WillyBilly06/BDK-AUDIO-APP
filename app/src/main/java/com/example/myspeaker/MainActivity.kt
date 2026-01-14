@@ -1,10 +1,18 @@
 package com.example.myspeaker
 
 import android.Manifest
+import android.app.Activity
 import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.companion.AssociationInfo
+import android.companion.AssociationRequest
+import android.companion.BluetoothDeviceFilter
+import android.companion.CompanionDeviceManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -14,10 +22,12 @@ import android.os.Looper
 import android.os.ParcelUuid
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import java.util.*
+import java.util.regex.Pattern
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -110,6 +120,158 @@ class MainActivity : AppCompatActivity() {
     // LED Effect Spinner
     private lateinit var spinnerLedEffect: Spinner
 
+    // Codec Selection Spinner
+    private lateinit var spinnerCodec: Spinner
+    private lateinit var codecCard: LinearLayout
+
+    // All possible Bluetooth codec names and types
+    private val allCodecNames = arrayOf(
+        "SBC (Default)",
+        "AAC",
+        "aptX",
+        "aptX HD",
+        "LDAC"
+    )
+
+    @Suppress("DEPRECATION")
+    private val allCodecTypes = intArrayOf(
+        BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC,
+        BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC,
+        BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX,
+        BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD,
+        BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC
+    )
+
+    // Currently available codecs for the connected device
+    private var availableCodecNames = mutableListOf<String>()
+    private var availableCodecTypes = mutableListOf<Int>()
+
+    // Bluetooth A2DP for codec control
+    private var bluetoothA2dp: BluetoothA2dp? = null
+    private var a2dpDevice: BluetoothDevice? = null
+
+    // Companion Device Manager for Android 16+ codec access
+    private var companionDeviceManager: CompanionDeviceManager? = null
+    private var isDeviceAssociated = false
+
+    // Companion Device association launcher - handles result silently
+    private val companionDeviceLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Association successful
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(
+                    CompanionDeviceManager.EXTRA_ASSOCIATION,
+                    AssociationInfo::class.java
+                )?.let { associationInfo ->
+                    android.util.Log.d("BluetoothCodec", "Associated with device: ${associationInfo.deviceMacAddress}")
+                    isDeviceAssociated = true
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra<BluetoothDevice>(CompanionDeviceManager.EXTRA_DEVICE)?.also { device ->
+                    android.util.Log.d("BluetoothCodec", "Associated with device: ${device.name} (${device.address})")
+                    isDeviceAssociated = true
+                }
+            }
+            
+            if (isDeviceAssociated) {
+                // Refresh codec spinner silently now that we're associated
+                handler.postDelayed({ updateCodecSpinner() }, 500)
+            }
+        } else {
+            android.util.Log.w("BluetoothCodec", "Companion device association cancelled or failed")
+            // Fail silently - don't show toast
+        }
+    }
+
+    // Bluetooth state receiver to detect when BT is turned off
+    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                    when (state) {
+                        BluetoothAdapter.STATE_OFF -> {
+                            runOnUiThread {
+                                if (isConnected) {
+                                    disconnectGatt()
+                                    tvStatus.text = "Bluetooth turned off"
+                                    btnScanConnect.text = "Connect"
+                                }
+                            }
+                        }
+                        BluetoothAdapter.STATE_ON -> {
+                            runOnUiThread {
+                                tvStatus.text = "Not Connected"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Codec config changed receiver - like Bluetooth Codec Changer app
+    private val codecConfigReceiver = object : BroadcastReceiver() {
+        @Suppress("DEPRECATION")
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.bluetooth.a2dp.profile.action.CODEC_CONFIG_CHANGED") {
+                android.util.Log.d("BluetoothCodec", "CODEC_CONFIG_CHANGED broadcast received!")
+                
+                // Try to get codec status from the intent
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val codecStatus = intent.getParcelableExtra(
+                        BluetoothCodecStatus.EXTRA_CODEC_STATUS,
+                        BluetoothCodecStatus::class.java
+                    )
+                    android.util.Log.d("BluetoothCodec", "New codec status: $codecStatus")
+                    codecStatus?.codecConfig?.let { config ->
+                        android.util.Log.d("BluetoothCodec", "New codec type: ${config.codecType}")
+                    }
+                }
+                
+                // Update UI when codec changes (from our app or system)
+                handler.postDelayed({ updateCodecSpinner() }, 200)
+            }
+        }
+    }
+
+    // A2DP profile listener for codec control
+    @android.annotation.SuppressLint("MissingPermission")
+    private val a2dpProfileListener = object : BluetoothProfile.ServiceListener {
+        override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+            try {
+                android.util.Log.d("BluetoothCodec", "A2DP onServiceConnected: profile=$profile, proxy=$proxy")
+                if (profile == BluetoothProfile.A2DP) {
+                    bluetoothA2dp = proxy as? BluetoothA2dp
+                    android.util.Log.d("BluetoothCodec", "A2DP proxy connected: $bluetoothA2dp")
+                    
+                    // Check connected devices immediately (only if we have permission)
+                    if (hasBluetoothPermissions()) {
+                        val connectedDevices = bluetoothA2dp?.connectedDevices
+                        android.util.Log.d("BluetoothCodec", "A2DP connected devices: ${connectedDevices?.size ?: 0}")
+                        connectedDevices?.forEach { device ->
+                            android.util.Log.d("BluetoothCodec", "  Device: ${device.name} (${device.address})")
+                        }
+                        
+                        updateCodecSpinner()
+                    }
+                }
+            } catch (e: SecurityException) {
+                android.util.Log.w("BluetoothCodec", "A2DP onServiceConnected - permission denied", e)
+            }
+        }
+
+        override fun onServiceDisconnected(profile: Int) {
+            android.util.Log.d("BluetoothCodec", "A2DP onServiceDisconnected: profile=$profile")
+            if (profile == BluetoothProfile.A2DP) {
+                bluetoothA2dp = null
+            }
+        }
+    }
+
     // LED effect names matching ESP32 enum order (from led_config.h LedEffectId)
     private val ledEffectNames = arrayOf(
         "Spectrum Bars",      // 0 - LED_EFFECT_SPECTRUM_BARS
@@ -171,20 +333,45 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var isOtaInProgress: Boolean = false
     @Volatile private var otaCancelled: Boolean = false
 
-    // permissions
-    private val blePermissions = mutableListOf(
-        Manifest.permission.ACCESS_FINE_LOCATION
-    ).apply {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            add(Manifest.permission.BLUETOOTH_SCAN)
-            add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-    }.toTypedArray()
+    // permissions - Android 12+ uses BLUETOOTH_SCAN/CONNECT, older uses location
+    private val blePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
 
     private val requestPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
-        ) { /* ignore result */ }
+        ) { results ->
+            // Log permission results
+            results.forEach { (permission, granted) ->
+                android.util.Log.d("Permissions", "$permission: $granted")
+            }
+            // If all permissions granted, continue with scan
+            if (results.values.all { it }) {
+                android.util.Log.d("Permissions", "All permissions granted")
+            } else {
+                android.util.Log.w("Permissions", "Some permissions denied")
+                runOnUiThread {
+                    tvStatus.text = "Bluetooth permission required"
+                }
+            }
+        }
+
+    /**
+     * Check if all required Bluetooth permissions are granted
+     */
+    private fun hasBluetoothPermissions(): Boolean {
+        return blePermissions.all {
+            ActivityCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
 
     private val pickFirmwareLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -272,6 +459,22 @@ class MainActivity : AppCompatActivity() {
         spinnerLedEffect = findViewById(R.id.spinnerLedEffect)
         setupLedEffectSpinner()
 
+        // Codec Selection Spinner
+        spinnerCodec = findViewById(R.id.spinnerCodec)
+        codecCard = findViewById(R.id.codecCard)
+        setupCodecSpinner()
+
+        // Associate device button for codec control
+        val btnAssociateDevice = findViewById<Button>(R.id.btnAssociateDevice)
+        btnAssociateDevice.setOnClickListener {
+            val device = a2dpDevice
+            if (device != null) {
+                requestCompanionAssociation(device)
+            } else {
+                Toast.makeText(this, "No A2DP device connected", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // Device list views
         deviceListContainer = findViewById(R.id.deviceListContainer)
         deviceRecyclerView = findViewById(R.id.deviceRecyclerView)
@@ -291,6 +494,21 @@ class MainActivity : AppCompatActivity() {
             btnScanConnect.isEnabled = false
             return
         }
+
+        // Initialize Companion Device Manager for codec control on Android 16+
+        companionDeviceManager = getSystemService(Context.COMPANION_DEVICE_SERVICE) as? CompanionDeviceManager
+        checkExistingAssociations()
+
+        // Register Bluetooth state receiver
+        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+        registerReceiver(bluetoothStateReceiver, filter)
+
+        // Register codec config changed receiver (like Bluetooth Codec Changer app)
+        val codecFilter = IntentFilter("android.bluetooth.a2dp.profile.action.CODEC_CONFIG_CHANGED")
+        registerReceiver(codecConfigReceiver, codecFilter)
+
+        // Get A2DP profile for codec control
+        bluetoothAdapter?.getProfileProxy(this, a2dpProfileListener, BluetoothProfile.A2DP)
 
         ensurePermissions()
 
@@ -366,6 +584,619 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupCodecSpinner() {
+        // Set flag to prevent triggering codec change during initialization
+        updatingFromDevice = true
+
+        // Initial placeholder - will be updated when A2DP connects
+        availableCodecNames.clear()
+        availableCodecTypes.clear()
+        availableCodecNames.add("Detecting codecs...")
+
+        val adapter = object : ArrayAdapter<String>(
+            this,
+            android.R.layout.simple_spinner_item,
+            ArrayList(availableCodecNames)
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent) as TextView
+                view.setTextColor(Color.WHITE)
+                view.textSize = 15f
+                view.setPadding(16, 12, 16, 12)
+                return view
+            }
+
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent) as TextView
+                view.setTextColor(Color.WHITE)
+                view.setBackgroundColor(Color.parseColor("#1E1E1E"))
+                view.textSize = 15f
+                view.setPadding(24, 16, 24, 16)
+                return view
+            }
+        }
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerCodec.adapter = adapter
+
+        spinnerCodec.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!updatingFromDevice && availableCodecTypes.isNotEmpty()) {
+                    setBluetoothCodec(position)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Hide codec card initially - will show when BLE connects
+        codecCard.visibility = View.GONE
+
+        // Reset flag after a delay
+        handler.postDelayed({
+            updatingFromDevice = false
+        }, 500)
+    }
+
+    @Suppress("DEPRECATION")
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun updateCodecSpinner() {
+        android.util.Log.d("BluetoothCodec", "updateCodecSpinner() called")
+        
+        // Check permissions first
+        if (!hasBluetoothPermissions()) {
+            android.util.Log.w("BluetoothCodec", "updateCodecSpinner: No Bluetooth permissions")
+            return
+        }
+        
+        // Get currently connected A2DP devices and update spinner
+        val a2dp = bluetoothA2dp
+        if (a2dp == null) {
+            android.util.Log.e("BluetoothCodec", "updateCodecSpinner: A2DP proxy is null!")
+            return
+        }
+        
+        try {
+            val connectedDevices = a2dp.connectedDevices
+            android.util.Log.d("BluetoothCodec", "updateCodecSpinner: ${connectedDevices.size} A2DP devices connected")
+        
+        if (connectedDevices.isNotEmpty()) {
+            a2dpDevice = connectedDevices[0]
+            android.util.Log.d("BluetoothCodec", "updateCodecSpinner: Using device ${a2dpDevice?.name} (${a2dpDevice?.address})")
+            
+            // Clear previous codec lists
+            val newCodecNames = mutableListOf<String>()
+            val newCodecTypes = mutableListOf<Int>()
+
+            var currentCodecIndex = 0
+            var currentCodecType = BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+
+            // Try to get codec status and available codecs using reflection
+            try {
+                android.util.Log.d("BluetoothCodec", "Getting codec status via reflection...")
+                val getCodecStatusMethod = a2dp.javaClass.getMethod("getCodecStatus", BluetoothDevice::class.java)
+                android.util.Log.d("BluetoothCodec", "getCodecStatus method: $getCodecStatusMethod")
+                
+                val codecStatus = getCodecStatusMethod.invoke(a2dp, a2dpDevice)
+                android.util.Log.d("BluetoothCodec", "codecStatus result: $codecStatus")
+                
+                if (codecStatus != null) {
+                    // Get selectable codecs
+                    val getSelectableMethod = codecStatus.javaClass.getMethod("getCodecsSelectableCapabilities")
+                    val selectableCodecs = getSelectableMethod.invoke(codecStatus) as? List<*>
+                    android.util.Log.d("BluetoothCodec", "Selectable codecs count: ${selectableCodecs?.size ?: 0}")
+                    
+                    selectableCodecs?.forEach { codec ->
+                        if (codec != null) {
+                            val getTypeMethod = codec.javaClass.getMethod("getCodecType")
+                            val type = getTypeMethod.invoke(codec) as? Int
+                            android.util.Log.d("BluetoothCodec", "  Found codec type: $type")
+                            if (type != null && !newCodecTypes.contains(type)) {
+                                val name = when (type) {
+                                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC -> "SBC (Default)"
+                                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC -> "AAC"
+                                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX -> "aptX"
+                                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD -> "aptX HD"
+                                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC -> "LDAC"
+                                    else -> "Codec $type"
+                                }
+                                newCodecNames.add(name)
+                                newCodecTypes.add(type)
+                                android.util.Log.d("BluetoothCodec", "  Added: $name (type=$type)")
+                            }
+                        }
+                    }
+                    
+                    // Get current codec
+                    val getConfigMethod = codecStatus.javaClass.getMethod("getCodecConfig")
+                    val codecConfig = getConfigMethod.invoke(codecStatus)
+                    android.util.Log.d("BluetoothCodec", "Current codec config: $codecConfig")
+                    if (codecConfig != null) {
+                        val getTypeMethod = codecConfig.javaClass.getMethod("getCodecType")
+                        currentCodecType = getTypeMethod.invoke(codecConfig) as? Int ?: BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+                        android.util.Log.d("BluetoothCodec", "Current codec type: $currentCodecType")
+                    }
+                } else {
+                    android.util.Log.e("BluetoothCodec", "getCodecStatus returned null!")
+                    // This might be due to missing Companion Device association on Android 16+
+                    if (!isDeviceAssociated && a2dpDevice != null) {
+                        android.util.Log.d("BluetoothCodec", "Not associated - requesting association...")
+                        runOnUiThread {
+                            requestCompanionAssociation(a2dpDevice!!)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("BluetoothCodec", "Failed to get codec status", e)
+                e.cause?.let { cause ->
+                    android.util.Log.e("BluetoothCodec", "Cause: ${cause.javaClass.name}: ${cause.message}")
+                    // Check if it's a security exception - need companion association
+                    if (cause is SecurityException && !isDeviceAssociated && a2dpDevice != null) {
+                        android.util.Log.d("BluetoothCodec", "SecurityException - requesting association...")
+                        runOnUiThread {
+                            requestCompanionAssociation(a2dpDevice!!)
+                        }
+                    }
+                }
+            }
+
+            // If no codecs were detected, add defaults
+            if (newCodecNames.isEmpty()) {
+                android.util.Log.w("BluetoothCodec", "No codecs detected, adding SBC default")
+                newCodecNames.add("SBC (Default)")
+                newCodecTypes.add(BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC)
+            }
+
+            android.util.Log.d("BluetoothCodec", "Final codec list: $newCodecNames")
+            android.util.Log.d("BluetoothCodec", "Final codec types: $newCodecTypes")
+
+            // Find current codec index
+            currentCodecIndex = newCodecTypes.indexOf(currentCodecType)
+            if (currentCodecIndex < 0) currentCodecIndex = 0
+            android.util.Log.d("BluetoothCodec", "Current codec index: $currentCodecIndex")
+
+            // Update the class variables
+            availableCodecNames.clear()
+            availableCodecNames.addAll(newCodecNames)
+            availableCodecTypes.clear()
+            availableCodecTypes.addAll(newCodecTypes)
+
+            val finalCodecIndex = currentCodecIndex
+
+            // Update spinner adapter with available codecs
+            runOnUiThread {
+                updatingFromDevice = true
+                android.util.Log.d("BluetoothCodec", "Updating spinner UI with ${newCodecNames.size} codecs")
+
+                val adapter = object : ArrayAdapter<String>(
+                    this,
+                    android.R.layout.simple_spinner_item,
+                    ArrayList(availableCodecNames)
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val view = super.getView(position, convertView, parent) as TextView
+                        view.setTextColor(Color.WHITE)
+                        view.textSize = 15f
+                        view.setPadding(16, 12, 16, 12)
+                        return view
+                    }
+
+                    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val view = super.getDropDownView(position, convertView, parent) as TextView
+                        view.setTextColor(Color.WHITE)
+                        view.setBackgroundColor(Color.parseColor("#1E1E1E"))
+                        view.textSize = 15f
+                        view.setPadding(24, 16, 24, 16)
+                        return view
+                    }
+                }
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerCodec.adapter = adapter
+                spinnerCodec.setSelection(finalCodecIndex)
+                spinnerCodec.isEnabled = true
+
+                // Only show codec card when BLE is connected
+                codecCard.visibility = if (isConnected) View.VISIBLE else View.GONE
+                
+                // Hide associate button - we handle association automatically
+                val btnAssociate = findViewById<Button>(R.id.btnAssociateDevice)
+                btnAssociate.visibility = View.GONE
+
+                handler.postDelayed({
+                    updatingFromDevice = false
+                }, 500)
+            }
+        } else {
+            // No A2DP device connected
+            android.util.Log.w("BluetoothCodec", "No A2DP devices connected")
+            runOnUiThread {
+                updatingFromDevice = true
+
+                availableCodecNames.clear()
+                availableCodecTypes.clear()
+                availableCodecNames.add("No A2DP device")
+
+                val adapter = object : ArrayAdapter<String>(
+                    this,
+                    android.R.layout.simple_spinner_item,
+                    ArrayList(availableCodecNames)
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val view = super.getView(position, convertView, parent) as TextView
+                        view.setTextColor(Color.GRAY)
+                        view.textSize = 15f
+                        view.setPadding(16, 12, 16, 12)
+                        return view
+                    }
+                }
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerCodec.adapter = adapter
+                spinnerCodec.isEnabled = false
+                // Only show codec card when BLE is connected
+                codecCard.visibility = if (isConnected) View.VISIBLE else View.GONE
+
+                handler.postDelayed({
+                    updatingFromDevice = false
+                }, 500)
+            }
+        }
+        } catch (e: SecurityException) {
+            android.util.Log.w("BluetoothCodec", "updateCodecSpinner: permission denied", e)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun setBluetoothCodec(codecIndex: Int) {
+        android.util.Log.d("BluetoothCodec", "setBluetoothCodec called with index: $codecIndex")
+        
+        if (codecIndex < 0 || codecIndex >= availableCodecTypes.size) {
+            android.util.Log.e("BluetoothCodec", "Invalid codec index: $codecIndex")
+            return
+        }
+
+        val a2dp = bluetoothA2dp ?: run {
+            android.util.Log.e("BluetoothCodec", "A2DP proxy is null")
+            Toast.makeText(this, "A2DP not available. Reconnecting...", Toast.LENGTH_SHORT).show()
+            bluetoothAdapter?.getProfileProxy(this, a2dpProfileListener, BluetoothProfile.A2DP)
+            return
+        }
+        
+        val connectedDevices = a2dp.connectedDevices
+        android.util.Log.d("BluetoothCodec", "Connected A2DP devices: ${connectedDevices.size}")
+        
+        if (connectedDevices.isEmpty()) {
+            android.util.Log.e("BluetoothCodec", "No A2DP devices connected")
+            Toast.makeText(this, "No A2DP device connected. Connect speaker via Bluetooth settings first.", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        val device = connectedDevices[0]
+        a2dpDevice = device
+        android.util.Log.d("BluetoothCodec", "Target device: ${device.name} (${device.address})")
+
+        val codecType = availableCodecTypes[codecIndex]
+        val codecName = availableCodecNames[codecIndex]
+        android.util.Log.d("BluetoothCodec", "Target codec: $codecName (type=$codecType)")
+
+        // Get current codec status to read existing config values
+        val currentConfig = invokeGetCodecStatus(a2dp, device)
+        android.util.Log.d("BluetoothCodec", "Current codec config: $currentConfig")
+
+        // For LDAC, we can set codecSpecific1 for quality mode (0=default, 1000-1003 for quality levels)
+        // For now, use 0 (default/inherit)
+        val codecSpecific1 = 0L
+
+        try {
+            // Build the codec config - using 0 means inherit from current config (alternative config behavior)
+            val codecConfig = buildCodecConfig(
+                codecType = codecType,
+                sampleRate = 0,  // inherit from current
+                bitsPerSample = 0,  // inherit from current
+                channelMode = 0,  // inherit from current
+                codecSpecific1 = codecSpecific1
+            )
+            
+            android.util.Log.d("BluetoothCodec", "Built codec config: $codecConfig")
+
+            // Two-step apply: if codecSpecific1 != 0, first apply with codecSpecific1=0, then with actual value
+            // Per reverse engineering: requiresTwoStep returns true iff codecSpecific1 != 0
+            if (codecSpecific1 != 0L) {
+                android.util.Log.d("BluetoothCodec", "Two-step apply (codecSpecific1 != 0)")
+                
+                // Step 1: Apply with codecSpecific1 = 0
+                val step1Config = buildCodecConfig(codecType, 0, 0, 0, 0L)
+                invokeSetCodec(a2dp, device, step1Config)
+                
+                // Step 2: After 250ms, apply with actual codecSpecific1
+                handler.postDelayed({
+                    try {
+                        invokeSetCodec(a2dp, device, codecConfig)
+                        android.util.Log.d("BluetoothCodec", "Codec set to: $codecName")
+                    } catch (e: Exception) {
+                        android.util.Log.e("BluetoothCodec", "Two-step codec change failed", e)
+                    }
+                }, 250)
+            } else {
+                // Direct apply
+                android.util.Log.d("BluetoothCodec", "Direct apply codec")
+                invokeSetCodec(a2dp, device, codecConfig)
+                android.util.Log.d("BluetoothCodec", "Codec set to: $codecName")
+            }
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            val cause = e.cause
+            android.util.Log.e("BluetoothCodec", "InvocationTargetException", e)
+            android.util.Log.e("BluetoothCodec", "Cause: ${cause?.javaClass?.name}: ${cause?.message}")
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "Exception during codec change", e)
+        }
+    }
+
+    /**
+     * Get codec status via reflection - matches CodecReflectionKt.invokeGetCodec()
+     */
+    private fun invokeGetCodecStatus(a2dp: BluetoothA2dp, device: BluetoothDevice): BluetoothCodecStatus? {
+        return try {
+            val method = a2dp.javaClass.getMethod("getCodecStatus", BluetoothDevice::class.java)
+            method.invoke(a2dp, device) as? BluetoothCodecStatus
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "invokeGetCodecStatus failed", e)
+            null
+        }
+    }
+
+    /**
+     * Set codec via reflection - matches CodecReflectionKt.invokeSetCodec()
+     */
+    private fun invokeSetCodec(a2dp: BluetoothA2dp, device: BluetoothDevice, codecConfig: BluetoothCodecConfig) {
+        android.util.Log.d("BluetoothCodec", "invokeSetCodec: device=${device.address}, config=$codecConfig")
+        
+        val method = a2dp.javaClass.getMethod(
+            "setCodecConfigPreference",
+            BluetoothDevice::class.java,
+            BluetoothCodecConfig::class.java
+        )
+        method.invoke(a2dp, device, codecConfig)
+        android.util.Log.d("BluetoothCodec", "invokeSetCodec completed")
+    }
+
+    /**
+     * Build BluetoothCodecConfig using constructor via reflection.
+     * This matches the exact behavior of the Bluetooth Codec Changer app.
+     * 
+     * Constructor: BluetoothCodecConfig(codecType, priority, sampleRate, bitsPerSample, channelMode, 
+     *                                   codecSpecific1, codecSpecific2, codecSpecific3, codecSpecific4)
+     * 
+     * Priority is always 1,000,000 (CODEC_PRIORITY_HIGHEST)
+     * 
+     * Passing 0 for sampleRate/bitsPerSample/channelMode means "inherit from current config"
+     * (this is the "alternative config" behavior from the app)
+     */
+    @Suppress("DEPRECATION")
+    private fun buildCodecConfig(
+        codecType: Int,
+        sampleRate: Int,
+        bitsPerSample: Int,
+        channelMode: Int,
+        codecSpecific1: Long
+    ): BluetoothCodecConfig {
+        android.util.Log.d("BluetoothCodec", "buildCodecConfig: type=$codecType, sampleRate=$sampleRate, bits=$bitsPerSample, channel=$channelMode, specific1=$codecSpecific1")
+        
+        try {
+            // Always use constructor via reflection (matches app behavior)
+            val constructor = BluetoothCodecConfig::class.java.getDeclaredConstructor(
+                Int::class.javaPrimitiveType,    // codecType
+                Int::class.javaPrimitiveType,    // codecPriority
+                Int::class.javaPrimitiveType,    // sampleRate
+                Int::class.javaPrimitiveType,    // bitsPerSample
+                Int::class.javaPrimitiveType,    // channelMode
+                Long::class.javaPrimitiveType,   // codecSpecific1
+                Long::class.javaPrimitiveType,   // codecSpecific2
+                Long::class.javaPrimitiveType,   // codecSpecific3
+                Long::class.javaPrimitiveType    // codecSpecific4
+            )
+            constructor.isAccessible = true
+            
+            val config = constructor.newInstance(
+                codecType,
+                1000000,  // priority = 1,000,000 (highest, as per app)
+                sampleRate,
+                bitsPerSample,
+                channelMode,
+                codecSpecific1,
+                0L,  // codecSpecific2
+                0L,  // codecSpecific3
+                0L   // codecSpecific4
+            )
+            
+            android.util.Log.d("BluetoothCodec", "buildCodecConfig success: $config")
+            return config
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "buildCodecConfig failed", e)
+            throw e
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getCurrentCodecType(a2dp: BluetoothA2dp, device: BluetoothDevice): Int {
+        return try {
+            val getCodecStatusMethod = a2dp.javaClass.getMethod("getCodecStatus", BluetoothDevice::class.java)
+            val codecStatus = getCodecStatusMethod.invoke(a2dp, device)
+            if (codecStatus != null) {
+                val getCodecConfigMethod = codecStatus.javaClass.getMethod("getCodecConfig")
+                val codecConfig = getCodecConfigMethod.invoke(codecStatus)
+                if (codecConfig != null) {
+                    val getCodecTypeMethod = codecConfig.javaClass.getMethod("getCodecType")
+                    @Suppress("DEPRECATION")
+                    getCodecTypeMethod.invoke(codecConfig) as? Int ?: BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+                } else {
+                    @Suppress("DEPRECATION")
+                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+            }
+        } catch (e: Exception) {
+            @Suppress("DEPRECATION")
+            BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
+        }
+    }
+
+    /**
+     * Check if we have any existing Companion Device associations
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun checkExistingAssociations() {
+        val cdm = companionDeviceManager ?: return
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val associations = cdm.myAssociations
+                android.util.Log.d("BluetoothCodec", "Existing associations: ${associations.size}")
+                associations.forEach { info ->
+                    android.util.Log.d("BluetoothCodec", "  Associated: ${info.deviceMacAddress}")
+                }
+                isDeviceAssociated = associations.isNotEmpty()
+            } else {
+                @Suppress("DEPRECATION")
+                val associations = cdm.associations
+                android.util.Log.d("BluetoothCodec", "Existing associations: ${associations.size}")
+                associations.forEach { mac ->
+                    android.util.Log.d("BluetoothCodec", "  Associated: $mac")
+                }
+                isDeviceAssociated = associations.isNotEmpty()
+            }
+            
+            if (isDeviceAssociated) {
+                android.util.Log.d("BluetoothCodec", "Device is already associated - codec control should work")
+            } else {
+                android.util.Log.d("BluetoothCodec", "No existing associations - will auto-associate when needed")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "Failed to check associations", e)
+        }
+    }
+
+    /**
+     * Check if a specific device is already associated by MAC address
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun isDeviceAlreadyAssociated(deviceAddress: String): Boolean {
+        val cdm = companionDeviceManager ?: return false
+        
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                cdm.myAssociations.any { info ->
+                    info.deviceMacAddress?.toString()?.equals(deviceAddress, ignoreCase = true) == true
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                cdm.associations.any { mac ->
+                    mac.equals(deviceAddress, ignoreCase = true)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "Failed to check device association", e)
+            false
+        }
+    }
+
+    /**
+     * Request Companion Device association for the connected A2DP device.
+     * This is required on Android 16+ to access hidden codec APIs.
+     * Association happens silently if device is already known.
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun requestCompanionAssociation(device: BluetoothDevice) {
+        val cdm = companionDeviceManager
+        if (cdm == null) {
+            android.util.Log.e("BluetoothCodec", "CompanionDeviceManager not available")
+            return
+        }
+
+        android.util.Log.d("BluetoothCodec", "Requesting companion association for ${device.name} (${device.address})")
+
+        // Check if this specific device is already associated
+        if (isDeviceAlreadyAssociated(device.address)) {
+            android.util.Log.d("BluetoothCodec", "Device ${device.address} already associated")
+            isDeviceAssociated = true
+            return
+        }
+
+        try {
+            // Build a filter to find this specific Bluetooth device by MAC address
+            val deviceFilter = BluetoothDeviceFilter.Builder()
+                .setAddress(device.address)  // Target this specific device
+                .build()
+
+            val associationRequest = AssociationRequest.Builder()
+                .addDeviceFilter(deviceFilter)
+                .setSingleDevice(true)  // Auto-associate with this exact device
+                .build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ uses callback approach
+                cdm.associate(
+                    associationRequest,
+                    mainExecutor,
+                    object : CompanionDeviceManager.Callback() {
+                        override fun onAssociationPending(intentSender: android.content.IntentSender) {
+                            // System requires user confirmation - auto-launch it
+                            android.util.Log.d("BluetoothCodec", "Association pending, auto-launching...")
+                            try {
+                                companionDeviceLauncher.launch(
+                                    IntentSenderRequest.Builder(intentSender).build()
+                                )
+                            } catch (e: Exception) {
+                                android.util.Log.e("BluetoothCodec", "Failed to launch association intent", e)
+                            }
+                        }
+
+                        override fun onAssociationCreated(associationInfo: AssociationInfo) {
+                            android.util.Log.d("BluetoothCodec", "Association created: ${associationInfo.deviceMacAddress}")
+                            isDeviceAssociated = true
+                            runOnUiThread {
+                                handler.postDelayed({ updateCodecSpinner() }, 500)
+                            }
+                        }
+
+                        override fun onFailure(error: CharSequence?) {
+                            android.util.Log.e("BluetoothCodec", "Association failed: $error")
+                            // Fail silently - don't show toast
+                        }
+                    }
+                )
+            } else {
+                // Older Android uses deprecated associate method
+                @Suppress("DEPRECATION")
+                cdm.associate(
+                    associationRequest,
+                    object : CompanionDeviceManager.Callback() {
+                        @Deprecated("Deprecated in Java")
+                        override fun onDeviceFound(chooserLauncher: android.content.IntentSender) {
+                            android.util.Log.d("BluetoothCodec", "Device found, auto-launching...")
+                            try {
+                                companionDeviceLauncher.launch(
+                                    IntentSenderRequest.Builder(chooserLauncher).build()
+                                )
+                            } catch (e: Exception) {
+                                android.util.Log.e("BluetoothCodec", "Failed to launch chooser", e)
+                            }
+                        }
+
+                        override fun onFailure(error: CharSequence?) {
+                            android.util.Log.e("BluetoothCodec", "Association failed: $error")
+                            // Fail silently - don't show toast
+                        }
+                    },
+                    handler
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BluetoothCodec", "Failed to request association", e)
+        }
+    }
+
     private fun ensurePermissions() {
         val missing = blePermissions.filter {
             ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -426,7 +1257,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun startScan() {
         if (isScanning) return
-        ensurePermissions()
+        
+        // Check if permissions are granted
+        if (!hasBluetoothPermissions()) {
+            tvStatus.text = "Bluetooth permission required"
+            ensurePermissions()
+            return
+        }
 
         val adapter = bluetoothAdapter ?: run {
             tvStatus.text = "Bluetooth not available"
@@ -552,6 +1389,8 @@ class MainActivity : AppCompatActivity() {
                     tvStatus.text = "Not Connected"
                     btnScanConnect.text = "Connect"
                     resetUiToDefaults()
+                    // Hide codec card when BLE disconnects
+                    codecCard.visibility = View.GONE
                 }
             }
         }
@@ -594,6 +1433,9 @@ class MainActivity : AppCompatActivity() {
             otaCtrlChar?.let { enableNotifications(gatt, it) }
 
             isConnected = true
+            
+            // Update codec spinner now that BLE is connected
+            updateCodecSpinner()
 
             // Sequential sync: CONTROL -> EQ -> NAME -> LED EFFECT
             handler.postDelayed({
@@ -1286,6 +2128,24 @@ class MainActivity : AppCompatActivity() {
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
+
+        // Unregister Bluetooth state receiver
+        try {
+            unregisterReceiver(bluetoothStateReceiver)
+        } catch (e: Exception) {
+            // Receiver may not be registered
+        }
+
+        // Unregister codec config receiver
+        try {
+            unregisterReceiver(codecConfigReceiver)
+        } catch (e: Exception) {
+            // Receiver may not be registered
+        }
+
+        // Close A2DP profile proxy
+        bluetoothAdapter?.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp)
+        bluetoothA2dp = null
     }
 }
 

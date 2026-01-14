@@ -8,9 +8,17 @@ BDK Audio App provides a comprehensive control interface for managing Bluetooth 
 
 ## Screenshots
 
-| Connection | DSP Controls | LED Effects |
-|------------|--------------|-------------|
-| Scan and connect to your ESP32 speaker | Adjust EQ, bass boost, and channel settings | Choose from 21 audio-reactive LED effects |
+<p align="center">
+  <img src="screenshots/screenshot_main.png" width="250" alt="Main Control Screen"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="screenshots/screenshot_effects.png" width="250" alt="LED Effects"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="screenshots/screenshot_ota.png" width="250" alt="OTA Update"/>
+</p>
+
+| Main Controls | LED Effects | OTA Update |
+|:-------------:|:-----------:|:----------:|
+| DSP controls, EQ sliders, and real-time audio levels | 21 audio-reactive LED visualization effects | Wireless firmware updates with progress |
 
 ## Features
 
@@ -20,6 +28,18 @@ BDK Audio App provides a comprehensive control interface for managing Bluetooth 
 - Real-time connection status monitoring
 - Switch between multiple devices
 - Reads current device settings on connect (EQ, DSP toggles, LED effect)
+- **Bluetooth state detection**: Auto-disconnect when Bluetooth is turned off
+- **Bluetooth enable prompt**: Asks user to enable Bluetooth if disabled
+
+###  Bluetooth Codec Selection
+Change the Bluetooth audio codec directly from the app:
+- **SBC** - Universal compatibility (default)
+- **AAC** - Better quality for iOS devices
+- **aptX** - Low latency, good quality
+- **aptX HD** - High-definition audio
+- **LDAC** - Highest quality (up to 990kbps)
+
+> **Note**: Codec selection requires the speaker to be connected via Bluetooth (A2DP) first. Some devices may require Developer Options enabled.
 
 ###  DSP Control
 - **Bass Boost**: Toggle hardware bass enhancement
