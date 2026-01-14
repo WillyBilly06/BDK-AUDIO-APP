@@ -558,6 +558,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Refresh codec info when returning from other screens
+        if (isConnected && bluetoothA2dp != null) {
+            handler.postDelayed({ updateCodecSpinner() }, 300)
+        }
+        // Update UI to reflect current connection state
+        if (isConnected) {
+            tvStatus.text = "Connected"
+            btnScanConnect.text = "Disconnect"
+            codecCard.visibility = View.VISIBLE
+        } else {
+            tvStatus.text = "Not Connected"
+            btnScanConnect.text = "Connect"
+            codecCard.visibility = View.GONE
+        }
+    }
+
     private fun setupLedEffectSpinner() {
         // Custom adapter with dark theme styling
         val adapter = object : ArrayAdapter<String>(
