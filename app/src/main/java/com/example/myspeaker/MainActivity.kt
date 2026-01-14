@@ -25,6 +25,8 @@ import android.content.Intent
 import android.view.View
 import android.view.ViewGroup
 import android.graphics.Color
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class MainActivity : AppCompatActivity() {
@@ -270,6 +272,10 @@ class MainActivity : AppCompatActivity() {
         spinnerLedEffect = findViewById(R.id.spinnerLedEffect)
         setupLedEffectSpinner()
 
+        // Device list views
+        deviceListContainer = findViewById(R.id.deviceListContainer)
+        deviceRecyclerView = findViewById(R.id.deviceRecyclerView)
+
         // Button for other device
         val btnOtherDevice = findViewById<Button>(R.id.btnOtherDevice)
         btnOtherDevice.setOnClickListener {
@@ -459,24 +465,42 @@ class MainActivity : AppCompatActivity() {
     private fun showDevicePicker() {
         if (foundDevices.isEmpty()) {
             tvStatus.text = "No devices found"
+            hideDeviceList()
             return
         }
 
-        val labels = foundDevices.map { result ->
-            val d = result.device
-            val name = d.name ?: "ESP32 Device"
-            "$name (${d.address})"
-        }.toTypedArray()
+        // Auto-connect if only one device found
+        if (foundDevices.size == 1) {
+            val device = foundDevices[0].device
+            val name = device.name ?: "ESP32 Device"
+            tvStatus.text = "Connecting to $name..."
+            hideDeviceList()
+            connectToDevice(device)
+            return
+        }
 
-        AlertDialog.Builder(this)
-            .setTitle("Select Device")
-            .setItems(labels) { _, which ->
-                val chosen = foundDevices[which].device
-                tvStatus.text = "Connecting..."
-                connectToDevice(chosen)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        // Multiple devices - show integrated list
+        tvStatus.text = "${foundDevices.size} devices found"
+        showDeviceList()
+    }
+
+    private lateinit var deviceListContainer: LinearLayout
+    private lateinit var deviceRecyclerView: RecyclerView
+
+    private fun showDeviceList() {
+        deviceRecyclerView.layoutManager = LinearLayoutManager(this)
+        deviceRecyclerView.adapter = DeviceAdapter(foundDevices) { result ->
+            val device = result.device
+            val name = device.name ?: "ESP32 Device"
+            tvStatus.text = "Connecting to $name..."
+            hideDeviceList()
+            connectToDevice(device)
+        }
+        deviceListContainer.visibility = View.VISIBLE
+    }
+
+    private fun hideDeviceList() {
+        deviceListContainer.visibility = View.GONE
     }
 
     // ========= GATT CONNECTION =========
@@ -494,6 +518,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     tvStatus.text = "Discovering services..."
                     btnScanConnect.text = "Disconnect"
+                    hideDeviceList()
                 }
 
                 // Request large MTU for faster OTA
@@ -928,6 +953,9 @@ class MainActivity : AppCompatActivity() {
         } finally {
             updatingFromDevice = false
         }
+
+        // Hide device list if visible
+        hideDeviceList()
     }
 
     // ========= SEND DATA =========
