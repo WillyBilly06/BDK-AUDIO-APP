@@ -319,6 +319,9 @@ class MainActivity : AppCompatActivity() {
     private var currentChannelMode: String = "Unknown"
     private var currentPlaybackQuality: String = "Unknown"
 
+    // Reference to the Device Info bottom sheet for live updates
+    private var deviceInfoBottomSheet: DeviceInfoBottomSheet? = null
+
     private var isConnected = false
 
     // Guard to avoid feedback loops when we update switches from BLE
@@ -405,20 +408,22 @@ class MainActivity : AppCompatActivity() {
         }
         btnAppInfo = findViewById(R.id.btnAppInfo)
         btnAppInfo.setOnClickListener {
-            startActivity(android.content.Intent(this, AppInfoActivity::class.java))
+            AppInfoBottomSheet().show(supportFragmentManager, AppInfoBottomSheet.TAG)
         }
         val btnDeviceInfo = findViewById<Button>(R.id.btnDeviceInfo)
         btnDeviceInfo.setOnClickListener {
-            val intent = Intent(this, DeviceInfoActivity::class.java)
-            intent.putExtra("device_name", if (isConnected) currentDeviceNameStr else "Unknown")
-            intent.putExtra("fw_version", if (isConnected) currentFirmwareVersion else "Unknown")
-            intent.putExtra("is_connected", isConnected)
-            intent.putExtra("codec_name", currentCodecName)
-            intent.putExtra("sample_rate", currentSampleRate)
-            intent.putExtra("bits_per_sample", currentBitsPerSample)
-            intent.putExtra("channel_mode", currentChannelMode)
-            intent.putExtra("playback_quality", currentPlaybackQuality)
-            startActivity(intent)
+            val bottomSheet = DeviceInfoBottomSheet.newInstance(
+                isConnected = isConnected,
+                deviceName = if (isConnected) currentDeviceNameStr else "Unknown",
+                fwVersion = if (isConnected) currentFirmwareVersion else "Unknown",
+                codecName = currentCodecName,
+                sampleRate = currentSampleRate,
+                bitsPerSample = currentBitsPerSample,
+                channelMode = currentChannelMode,
+                playbackQuality = currentPlaybackQuality
+            )
+            deviceInfoBottomSheet = bottomSheet
+            bottomSheet.show(supportFragmentManager, DeviceInfoBottomSheet.TAG)
         }
         btnStartOta.setOnClickListener {
             val uri = firmwareUri
@@ -809,6 +814,20 @@ class MainActivity : AppCompatActivity() {
                             }
                             
                             android.util.Log.d("BluetoothCodec", "Codec details: $currentCodecName, $currentSampleRate, $currentBitsPerSample, $currentChannelMode, $currentPlaybackQuality")
+                            
+                            // Update Device Info bottom sheet if open
+                            runOnUiThread {
+                                deviceInfoBottomSheet?.updateInfo(
+                                    isConnected = isConnected,
+                                    deviceName = currentDeviceNameStr,
+                                    fwVersion = currentFirmwareVersion,
+                                    codecName = currentCodecName,
+                                    sampleRate = currentSampleRate,
+                                    bitsPerSample = currentBitsPerSample,
+                                    channelMode = currentChannelMode,
+                                    playbackQuality = currentPlaybackQuality
+                                )
+                            }
                         } catch (e: Exception) {
                             android.util.Log.e("BluetoothCodec", "Failed to get codec details", e)
                         }
