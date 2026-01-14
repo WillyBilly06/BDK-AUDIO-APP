@@ -445,7 +445,7 @@ class MainActivity : AppCompatActivity() {
         handler.postDelayed({
             stopScan()
             showDevicePicker()
-        }, 5000)
+        }, 2000)
     }
 
     private fun stopScan() {
