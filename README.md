@@ -6,7 +6,7 @@ A professional Android companion application for controlling ESP32-based Bluetoo
 
 BDK Audio App provides a comprehensive control interface for managing Bluetooth Low Energy (BLE) connected ESP32 audio devices. The application enables users to adjust DSP parameters, monitor real-time audio levels, select LED visualization effects, rename the device, and perform firmware updates over-the-air.
 
-## Screenshots
+## App Screenshots
 
 <p align="center">
   <img src="screenshots/1000025257.jpg" width="300" alt="Main Controls"/>
