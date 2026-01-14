@@ -19,14 +19,35 @@ class DeviceInfoActivity : AppCompatActivity() {
         val tvFirmwareVersion = findViewById<TextView>(R.id.tvFirmwareVersion)
         val tvConnectionStatus = findViewById<TextView>(R.id.tvConnectionStatus)
         val statusIndicator = findViewById<View>(R.id.statusIndicator)
+        
+        // Audio info views
+        val tvCodecName = findViewById<TextView>(R.id.tvCodecName)
+        val tvSampleRate = findViewById<TextView>(R.id.tvSampleRate)
+        val tvBitsPerSample = findViewById<TextView>(R.id.tvBitsPerSample)
+        val tvChannelMode = findViewById<TextView>(R.id.tvChannelMode)
+        val tvPlaybackQuality = findViewById<TextView>(R.id.tvPlaybackQuality)
 
         // Read values that MainActivity put into the Intent
         val isConnected = intent.getBooleanExtra("is_connected", false)
         val deviceName = if (isConnected) intent.getStringExtra("device_name") ?: "Unknown" else "Unknown"
         val fwVersion  = if (isConnected) intent.getStringExtra("fw_version") ?: "Unknown" else "Unknown"
+        
+        // Read codec info
+        val codecName = intent.getStringExtra("codec_name") ?: "Unknown"
+        val sampleRate = intent.getStringExtra("sample_rate") ?: "Unknown"
+        val bitsPerSample = intent.getStringExtra("bits_per_sample") ?: "Unknown"
+        val channelMode = intent.getStringExtra("channel_mode") ?: "Unknown"
+        val playbackQuality = intent.getStringExtra("playback_quality") ?: "Unknown"
 
         tvDeviceName.text = deviceName
         tvFirmwareVersion.text = fwVersion
+        
+        // Set audio info
+        tvCodecName.text = codecName
+        tvSampleRate.text = sampleRate
+        tvBitsPerSample.text = bitsPerSample
+        tvChannelMode.text = channelMode
+        tvPlaybackQuality.text = playbackQuality
 
         // Update connection status based on is_connected flag
         if (isConnected) {

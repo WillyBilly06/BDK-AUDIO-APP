@@ -312,6 +312,13 @@ class MainActivity : AppCompatActivity() {
 
     var currentFirmwareVersion: String = "Unknown"
 
+    // Current codec info for Device Info screen
+    private var currentCodecName: String = "Unknown"
+    private var currentSampleRate: String = "Unknown"
+    private var currentBitsPerSample: String = "Unknown"
+    private var currentChannelMode: String = "Unknown"
+    private var currentPlaybackQuality: String = "Unknown"
+
     private var isConnected = false
 
     // Guard to avoid feedback loops when we update switches from BLE
@@ -406,6 +413,11 @@ class MainActivity : AppCompatActivity() {
             intent.putExtra("device_name", if (isConnected) currentDeviceNameStr else "Unknown")
             intent.putExtra("fw_version", if (isConnected) currentFirmwareVersion else "Unknown")
             intent.putExtra("is_connected", isConnected)
+            intent.putExtra("codec_name", currentCodecName)
+            intent.putExtra("sample_rate", currentSampleRate)
+            intent.putExtra("bits_per_sample", currentBitsPerSample)
+            intent.putExtra("channel_mode", currentChannelMode)
+            intent.putExtra("playback_quality", currentPlaybackQuality)
             startActivity(intent)
         }
         btnStartOta.setOnClickListener {
@@ -714,6 +726,74 @@ class MainActivity : AppCompatActivity() {
                         val getTypeMethod = codecConfig.javaClass.getMethod("getCodecType")
                         currentCodecType = getTypeMethod.invoke(codecConfig) as? Int ?: BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC
                         android.util.Log.d("BluetoothCodec", "Current codec type: $currentCodecType")
+                        
+                        // Extract codec details for Device Info screen
+                        try {
+                            // Get codec name
+                            currentCodecName = when (currentCodecType) {
+                                BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC -> "SBC"
+                                BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC -> "AAC"
+                                BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX -> "aptX"
+                                BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD -> "aptX HD"
+                                BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC -> "LDAC"
+                                else -> "Unknown"
+                            }
+                            
+                            // Get sample rate
+                            val getSampleRateMethod = codecConfig.javaClass.getMethod("getSampleRate")
+                            val sampleRate = getSampleRateMethod.invoke(codecConfig) as? Int ?: 0
+                            currentSampleRate = when (sampleRate) {
+                                0x01 -> "44.1 kHz"
+                                0x02 -> "48 kHz"
+                                0x04 -> "88.2 kHz"
+                                0x08 -> "96 kHz"
+                                0x10 -> "176.4 kHz"
+                                0x20 -> "192 kHz"
+                                else -> if (sampleRate > 0) "$sampleRate Hz" else "Unknown"
+                            }
+                            
+                            // Get bits per sample
+                            val getBitsMethod = codecConfig.javaClass.getMethod("getBitsPerSample")
+                            val bitsPerSample = getBitsMethod.invoke(codecConfig) as? Int ?: 0
+                            currentBitsPerSample = when (bitsPerSample) {
+                                0x01 -> "16-bit"
+                                0x02 -> "24-bit"
+                                0x04 -> "32-bit"
+                                else -> if (bitsPerSample > 0) "$bitsPerSample-bit" else "Unknown"
+                            }
+                            
+                            // Get channel mode
+                            val getChannelModeMethod = codecConfig.javaClass.getMethod("getChannelMode")
+                            val channelMode = getChannelModeMethod.invoke(codecConfig) as? Int ?: 0
+                            currentChannelMode = when (channelMode) {
+                                0x01 -> "Mono"
+                                0x02 -> "Stereo"
+                                else -> if (channelMode > 0) "Mode $channelMode" else "Unknown"
+                            }
+                            
+                            // Get playback quality (LDAC quality mode from codecSpecific1)
+                            val getCodecSpecific1Method = codecConfig.javaClass.getMethod("getCodecSpecific1")
+                            val codecSpecific1 = getCodecSpecific1Method.invoke(codecConfig) as? Long ?: 0
+                            currentPlaybackQuality = when {
+                                currentCodecType == BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC -> {
+                                    when (codecSpecific1.toInt()) {
+                                        1000 -> "Quality (990 kbps)"
+                                        1001 -> "Quality (660 kbps)"
+                                        1002 -> "Quality (330 kbps)"
+                                        1003 -> "Best Effort (Adaptive)"
+                                        else -> "Default"
+                                    }
+                                }
+                                currentCodecType == BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD -> "High Definition"
+                                currentCodecType == BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX -> "Low Latency"
+                                currentCodecType == BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC -> "Variable Bitrate"
+                                else -> "Standard"
+                            }
+                            
+                            android.util.Log.d("BluetoothCodec", "Codec details: $currentCodecName, $currentSampleRate, $currentBitsPerSample, $currentChannelMode, $currentPlaybackQuality")
+                        } catch (e: Exception) {
+                            android.util.Log.e("BluetoothCodec", "Failed to get codec details", e)
+                        }
                     }
                 } else {
                     android.util.Log.e("BluetoothCodec", "getCodecStatus returned null!")
