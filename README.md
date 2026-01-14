@@ -9,18 +9,24 @@ BDK Audio App provides a comprehensive control interface for managing Bluetooth 
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/1000025249.jpg" width="220" alt="Main Controls Top"/>
-  &nbsp;&nbsp;
-  <img src="screenshots/1000025251.jpg" width="220" alt="Main Controls Bottom"/>
-  &nbsp;&nbsp;
-  <img src="screenshots/1000025245.jpg" width="220" alt="App Info"/>
-  &nbsp;&nbsp;
-  <img src="screenshots/1000025247.jpg" width="220" alt="Device Info"/>
+  <img src="screenshots/1000025249.jpg" width="250" alt="Main Controls Top"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="screenshots/1000025251.jpg" width="250" alt="Main Controls Bottom"/>
 </p>
 
-| Controls & Effects | EQ & Settings | App Info | Device Info |
-|:------------------:|:-------------:|:--------:|:-----------:|
-| Connection, LED effects, codec, audio levels | DSP toggles, EQ, device name, OTA | About & developer | Status & firmware |
+| Controls & Effects | EQ & Settings |
+|:------------------:|:-------------:|
+| Connection, LED effects, codec, audio levels | DSP toggles, EQ, device name, OTA |
+
+<p align="center">
+  <img src="screenshots/1000025245.jpg" width="250" alt="App Info"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="screenshots/1000025247.jpg" width="250" alt="Device Info"/>
+</p>
+
+| App Info | Device Info |
+|:--------:|:-----------:|
+| About & developer | Status & firmware |
 
 ## Features
 
