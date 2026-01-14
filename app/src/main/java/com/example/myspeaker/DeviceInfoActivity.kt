@@ -32,12 +32,12 @@ class DeviceInfoActivity : AppCompatActivity() {
         val deviceName = if (isConnected) intent.getStringExtra("device_name") ?: "Unknown" else "Unknown"
         val fwVersion  = if (isConnected) intent.getStringExtra("fw_version") ?: "Unknown" else "Unknown"
         
-        // Read codec info
-        val codecName = intent.getStringExtra("codec_name") ?: "Unknown"
-        val sampleRate = intent.getStringExtra("sample_rate") ?: "Unknown"
-        val bitsPerSample = intent.getStringExtra("bits_per_sample") ?: "Unknown"
-        val channelMode = intent.getStringExtra("channel_mode") ?: "Unknown"
-        val playbackQuality = intent.getStringExtra("playback_quality") ?: "Unknown"
+        // Read codec info - only show when connected
+        val codecName = if (isConnected) intent.getStringExtra("codec_name") ?: "Unknown" else "Unknown"
+        val sampleRate = if (isConnected) intent.getStringExtra("sample_rate") ?: "Unknown" else "Unknown"
+        val bitsPerSample = if (isConnected) intent.getStringExtra("bits_per_sample") ?: "Unknown" else "Unknown"
+        val channelMode = if (isConnected) intent.getStringExtra("channel_mode") ?: "Unknown" else "Unknown"
+        val playbackQuality = if (isConnected) intent.getStringExtra("playback_quality") ?: "Unknown" else "Unknown"
 
         tvDeviceName.text = deviceName
         tvFirmwareVersion.text = fwVersion

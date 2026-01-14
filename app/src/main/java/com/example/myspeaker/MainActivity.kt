@@ -1465,6 +1465,12 @@ class MainActivity : AppCompatActivity() {
                 otaCtrlChar = null
                 otaDataChar = null
                 isConnected = false
+                // Reset codec info
+                currentCodecName = "Unknown"
+                currentSampleRate = "Unknown"
+                currentBitsPerSample = "Unknown"
+                currentChannelMode = "Unknown"
+                currentPlaybackQuality = "Unknown"
                 runOnUiThread {
                     tvStatus.text = "Not Connected"
                     btnScanConnect.text = "Connect"
@@ -1837,6 +1843,13 @@ class MainActivity : AppCompatActivity() {
         currentFirmwareVersion = "Unknown"
         lastDeviceName = "Unknown"
         lastFirmwareVersion = "Unknown"
+        
+        // Reset codec info
+        currentCodecName = "Unknown"
+        currentSampleRate = "Unknown"
+        currentBitsPerSample = "Unknown"
+        currentChannelMode = "Unknown"
+        currentPlaybackQuality = "Unknown"
 
         // Reset level meters to 0
         bar30.progress = 0
