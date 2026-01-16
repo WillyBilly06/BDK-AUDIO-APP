@@ -350,5 +350,226 @@
 
         </LinearLayout>
 
+        <!-- Sound Effects Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_modern"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SOUND EFFECTS"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1"
+                android:paddingBottom="12dp" />
+
+            <!-- Mute Sound Effects -->
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchMuteSound"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Mute Sound Effects"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:paddingVertical="8dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"
+                android:layout_marginVertical="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="UPLOAD SOUNDS"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_disabled"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp" />
+
+            <!-- Startup Sound -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Startup Sound"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvStartupStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Not Set"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_disabled"
+                    android:paddingEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnUploadStartup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Upload"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <!-- Pairing Sound -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Pairing Sound"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvPairingStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Not Set"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_disabled"
+                    android:paddingEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnUploadPairing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Upload"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <!-- Connected Sound -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Connected Sound"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvConnectedStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Not Set"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_disabled"
+                    android:paddingEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnUploadConnected"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Upload"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <!-- Max Volume Sound -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Max Volume Sound"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvMaxVolStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Not Set"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_disabled"
+                    android:paddingEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnUploadMaxVol"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Upload"
+                    android:textColor="@color/text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <!-- Upload Progress Bar -->
+            <ProgressBar
+                android:id="@+id/progressUpload"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="12dp"
+                android:max="100"
+                android:progress="0"
+                android:visibility="gone"
+                android:progressTint="@color/primary"
+                android:progressBackgroundTint="@color/divider" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Long press to delete a sound"
+                android:textSize="11sp"
+                android:textColor="@color/text_disabled"
+                android:gravity="center"
+                android:paddingTop="12dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 </ScrollView>

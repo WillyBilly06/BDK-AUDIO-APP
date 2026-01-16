@@ -1,6 +1,7 @@
 package com.example.myspeaker
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
@@ -73,6 +74,18 @@ class MainActivity : AppCompatActivity() {
     private val charUuidLedEffect =
         UUID.fromString("12345678-1234-1234-1234-1234567890b4")
 
+    // LED Settings characteristic (brightness, colors, gradient)
+    private val charUuidLedSettings =
+        UUID.fromString("12345678-1234-1234-1234-1234567890b5")
+
+    // Sound Control characteristic (mute status, control commands)
+    private val charUuidSoundCtrl =
+        UUID.fromString("12345678-1234-1234-1234-1234567890b6")
+    
+    // Sound Data characteristic (sound file upload)
+    private val charUuidSoundData =
+        UUID.fromString("12345678-1234-1234-1234-1234567890b7")
+
     // CCCD for notifications
     private val cccdUuid =
         UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
@@ -119,6 +132,25 @@ class MainActivity : AppCompatActivity() {
 
     // LED Effect Spinner
     private lateinit var spinnerLedEffect: Spinner
+
+    // LED Settings UI
+    private lateinit var ledSettingsCard: LinearLayout
+    private lateinit var seekLedBrightness: SeekBar
+    private lateinit var tvBrightnessValue: TextView
+    private lateinit var viewColor1: View
+    private lateinit var viewColor2: View
+    private lateinit var spinnerGradient: Spinner
+    private lateinit var seekLedSpeed: SeekBar
+    private lateinit var tvSpeedValue: TextView
+    private lateinit var ambientControlsContainer: LinearLayout
+    
+    // LED Settings state
+    private var currentLedBrightness: Int = 50
+    private var currentLedColor1: Int = Color.WHITE
+    private var currentLedColor2: Int = Color.BLUE
+    private var currentGradientType: Int = 0
+    private var currentLedSpeed: Int = 50
+    private var updatingLedSettings: Boolean = false
 
     // Codec Selection Spinner
     private lateinit var spinnerCodec: Spinner
@@ -294,8 +326,21 @@ class MainActivity : AppCompatActivity() {
         "DNA Helix",          // 17 - LED_EFFECT_DNA_HELIX
         "Audio Scope",        // 18 - LED_EFFECT_AUDIO_SCOPE
         "Bouncing Balls",     // 19 - LED_EFFECT_BOUNCING_BALLS
-        "Lava Lamp"           // 20 - LED_EFFECT_LAVA_LAMP
+        "Lava Lamp",          // 20 - LED_EFFECT_LAVA_LAMP
+        "Ambient"             // 21 - LED_EFFECT_AMBIENT
     )
+
+    // Gradient type names matching ESP32 enum (from led_config.h LedGradientType)
+    private val gradientTypeNames = arrayOf(
+        "None",               // 0 - GRADIENT_NONE (solid color1)
+        "Horizontal",         // 1 - GRADIENT_LINEAR_H
+        "Vertical",           // 2 - GRADIENT_LINEAR_V
+        "Radial",             // 3 - GRADIENT_RADIAL
+        "Diagonal"            // 4 - GRADIENT_DIAGONAL
+    )
+    
+    // Ambient effect ID (must match ESP32)
+    private val LED_EFFECT_AMBIENT = 21
 
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothGatt: BluetoothGatt? = null
@@ -305,6 +350,9 @@ class MainActivity : AppCompatActivity() {
     private var eqChar: BluetoothGattCharacteristic? = null
     private var nameChar: BluetoothGattCharacteristic? = null
     private var ledEffectChar: BluetoothGattCharacteristic? = null
+    private var ledSettingsChar: BluetoothGattCharacteristic? = null
+    private var soundCtrlChar: BluetoothGattCharacteristic? = null
+    private var soundDataChar: BluetoothGattCharacteristic? = null
 
     private var fwVerChar: BluetoothGattCharacteristic? = null
 
@@ -323,6 +371,19 @@ class MainActivity : AppCompatActivity() {
     private var deviceInfoBottomSheet: DeviceInfoBottomSheet? = null
 
     private var isConnected = false
+    
+    // Sound status byte: bit 0-3 = sound exists flags, bit 7 = muted
+    private var soundStatus: Int = 0
+    var isSoundMuted: Boolean
+        get() = (soundStatus and 0x80) != 0
+        set(value) {
+            soundStatus = if (value) soundStatus or 0x80 else soundStatus and 0x7F
+        }
+    
+    fun hasSoundFile(type: Int): Boolean = (soundStatus and (1 shl type)) != 0
+    
+    // Get current sound status for DeviceInfoBottomSheet sync
+    fun getSoundStatus(): Int = soundStatus
 
     // Guard to avoid feedback loops when we update switches from BLE
     private var updatingFromDevice = false
@@ -420,7 +481,8 @@ class MainActivity : AppCompatActivity() {
                 sampleRate = currentSampleRate,
                 bitsPerSample = currentBitsPerSample,
                 channelMode = currentChannelMode,
-                playbackQuality = currentPlaybackQuality
+                playbackQuality = currentPlaybackQuality,
+                soundStatus = soundStatus
             )
             deviceInfoBottomSheet = bottomSheet
             bottomSheet.show(supportFragmentManager, DeviceInfoBottomSheet.TAG)
@@ -475,6 +537,18 @@ class MainActivity : AppCompatActivity() {
         // LED Effect Spinner
         spinnerLedEffect = findViewById(R.id.spinnerLedEffect)
         setupLedEffectSpinner()
+
+        // LED Settings UI
+        ledSettingsCard = findViewById(R.id.ledSettingsCard)
+        seekLedBrightness = findViewById(R.id.seekLedBrightness)
+        tvBrightnessValue = findViewById(R.id.tvBrightnessValue)
+        viewColor1 = findViewById(R.id.viewColor1)
+        viewColor2 = findViewById(R.id.viewColor2)
+        spinnerGradient = findViewById(R.id.spinnerGradient)
+        seekLedSpeed = findViewById(R.id.seekLedSpeed)
+        tvSpeedValue = findViewById(R.id.tvSpeedValue)
+        ambientControlsContainer = findViewById(R.id.ambientControlsContainer)
+        setupLedSettingsUI()
 
         // Codec Selection Spinner
         spinnerCodec = findViewById(R.id.spinnerCodec)
@@ -610,6 +684,9 @@ class MainActivity : AppCompatActivity() {
 
         spinnerLedEffect.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Show/hide ambient controls based on selection
+                updateAmbientControlsVisibility(position)
+                
                 if (!updatingFromDevice) {
                     sendLedEffect(position)
                 }
@@ -617,6 +694,198 @@ class MainActivity : AppCompatActivity() {
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+    }
+
+    private fun updateAmbientControlsVisibility(effectPosition: Int) {
+        // Show ambient controls only when Ambient effect is selected
+        ambientControlsContainer.visibility = if (effectPosition == LED_EFFECT_AMBIENT) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun setupLedSettingsUI() {
+        // Brightness SeekBar
+        seekLedBrightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                tvBrightnessValue.text = progress.toString()
+                if (fromUser && !updatingLedSettings) {
+                    currentLedBrightness = progress
+                    sendLedSettings()
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Color 1 click handler - show color picker dialog
+        viewColor1.setOnClickListener {
+            showColorPickerDialog(currentLedColor1) { color ->
+                currentLedColor1 = color
+                viewColor1.setBackgroundColor(color)
+                sendLedSettings()
+            }
+        }
+        viewColor1.setBackgroundColor(currentLedColor1)
+
+        // Color 2 click handler - show color picker dialog
+        viewColor2.setOnClickListener {
+            showColorPickerDialog(currentLedColor2) { color ->
+                currentLedColor2 = color
+                viewColor2.setBackgroundColor(color)
+                sendLedSettings()
+            }
+        }
+        viewColor2.setBackgroundColor(currentLedColor2)
+
+        // Gradient Spinner
+        val gradientAdapter = object : ArrayAdapter<String>(
+            this,
+            android.R.layout.simple_spinner_item,
+            gradientTypeNames
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent) as TextView
+                view.setTextColor(Color.WHITE)
+                view.textSize = 14f
+                view.setPadding(12, 8, 12, 8)
+                return view
+            }
+
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent) as TextView
+                view.setTextColor(Color.WHITE)
+                view.setBackgroundColor(Color.parseColor("#1E1E1E"))
+                view.textSize = 14f
+                view.setPadding(20, 12, 20, 12)
+                return view
+            }
+        }
+        gradientAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerGradient.adapter = gradientAdapter
+
+        spinnerGradient.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!updatingLedSettings) {
+                    currentGradientType = position
+                    sendLedSettings()
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Speed SeekBar
+        seekLedSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                tvSpeedValue.text = progress.toString()
+                if (fromUser && !updatingLedSettings) {
+                    currentLedSpeed = progress
+                    sendLedSettings()
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    private fun showColorPickerDialog(initialColor: Int, onColorSelected: (Int) -> Unit) {
+        // Create a simple color picker dialog with RGB sliders
+        val dialogView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
+        
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 32)
+        }
+
+        val colorPreview = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                100
+            ).apply { bottomMargin = 32 }
+            setBackgroundColor(initialColor)
+        }
+        layout.addView(colorPreview)
+
+        var red = Color.red(initialColor)
+        var green = Color.green(initialColor)
+        var blue = Color.blue(initialColor)
+
+        fun updatePreview() {
+            colorPreview.setBackgroundColor(Color.rgb(red, green, blue))
+        }
+
+        // Red slider
+        val redLabel = TextView(this).apply {
+            text = "Red: $red"
+            setTextColor(Color.WHITE)
+        }
+        layout.addView(redLabel)
+        val seekRed = SeekBar(this).apply {
+            max = 255
+            progress = red
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    red = progress
+                    redLabel.text = "Red: $red"
+                    updatePreview()
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        layout.addView(seekRed)
+
+        // Green slider
+        val greenLabel = TextView(this).apply {
+            text = "Green: $green"
+            setTextColor(Color.WHITE)
+        }
+        layout.addView(greenLabel)
+        val seekGreen = SeekBar(this).apply {
+            max = 255
+            progress = green
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    green = progress
+                    greenLabel.text = "Green: $green"
+                    updatePreview()
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        layout.addView(seekGreen)
+
+        // Blue slider
+        val blueLabel = TextView(this).apply {
+            text = "Blue: $blue"
+            setTextColor(Color.WHITE)
+        }
+        layout.addView(blueLabel)
+        val seekBlue = SeekBar(this).apply {
+            max = 255
+            progress = blue
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    blue = progress
+                    blueLabel.text = "Blue: $blue"
+                    updatePreview()
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        layout.addView(seekBlue)
+
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+            .setTitle("Select Color")
+            .setView(layout)
+            .setPositiveButton("OK") { _, _ ->
+                onColorSelected(Color.rgb(red, green, blue))
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupCodecSpinner() {
@@ -995,6 +1264,10 @@ class MainActivity : AppCompatActivity() {
         val codecName = availableCodecNames[codecIndex]
         android.util.Log.d("BluetoothCodec", "Target codec: $codecName (type=$codecType)")
 
+        // Get current codec before change
+        val currentCodecBefore = getCurrentCodecType(a2dp, device)
+        android.util.Log.d("BluetoothCodec", "Current codec before change: $currentCodecBefore")
+
         // Get current codec status to read existing config values
         val currentConfig = invokeGetCodecStatus(a2dp, device)
         android.util.Log.d("BluetoothCodec", "Current codec config: $currentConfig")
@@ -1029,6 +1302,8 @@ class MainActivity : AppCompatActivity() {
                     try {
                         invokeSetCodec(a2dp, device, codecConfig)
                         android.util.Log.d("BluetoothCodec", "Codec set to: $codecName")
+                        // Verify codec change after another delay
+                        verifyCodecChange(codecType, codecName, currentCodecBefore)
                     } catch (e: Exception) {
                         android.util.Log.e("BluetoothCodec", "Two-step codec change failed", e)
                     }
@@ -1038,6 +1313,8 @@ class MainActivity : AppCompatActivity() {
                 android.util.Log.d("BluetoothCodec", "Direct apply codec")
                 invokeSetCodec(a2dp, device, codecConfig)
                 android.util.Log.d("BluetoothCodec", "Codec set to: $codecName")
+                // Verify codec change after a delay
+                verifyCodecChange(codecType, codecName, currentCodecBefore)
             }
         } catch (e: java.lang.reflect.InvocationTargetException) {
             val cause = e.cause
@@ -1046,6 +1323,69 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             android.util.Log.e("BluetoothCodec", "Exception during codec change", e)
         }
+    }
+
+    /**
+     * Verify that the codec change was successful. If not, prompt user to enable it in Developer Options.
+     */
+    @Suppress("DEPRECATION")
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun verifyCodecChange(targetCodecType: Int, targetCodecName: String, previousCodecType: Int) {
+        handler.postDelayed({
+            val a2dp = bluetoothA2dp ?: return@postDelayed
+            val device = a2dpDevice ?: return@postDelayed
+            
+            val currentCodec = getCurrentCodecType(a2dp, device)
+            android.util.Log.d("BluetoothCodec", "Verify: target=$targetCodecType, current=$currentCodec, previous=$previousCodecType")
+            
+            if (currentCodec != targetCodecType) {
+                // Codec didn't change - show prompt based on codec type
+                val codecTypeName = when (targetCodecType) {
+                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC -> "LDAC"
+                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD -> "aptX HD"
+                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX -> "aptX"
+                    BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC -> "AAC"
+                    else -> targetCodecName
+                }
+                
+                runOnUiThread {
+                    showCodecEnableDialog(codecTypeName)
+                }
+            } else {
+                android.util.Log.d("BluetoothCodec", "Codec successfully changed to $targetCodecName")
+            }
+        }, 500)  // Wait 500ms for the codec change to take effect
+    }
+
+    /**
+     * Show a dialog prompting the user to enable the codec in Developer Options
+     */
+    private fun showCodecEnableDialog(codecName: String) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("$codecName Not Enabled")
+            .setMessage("$codecName codec is disabled in your phone's Bluetooth settings.\n\n" +
+                       "To enable it:\n" +
+                       "1. Go to Settings → Developer options\n" +
+                       "2. Find 'Bluetooth Audio Codec' or 'Optional codecs'\n" +
+                       "3. Enable $codecName\n\n" +
+                       "Would you like to open Developer Options?")
+            .setPositiveButton("Open Settings") { _, _ ->
+                try {
+                    // Try to open Developer Options directly
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Fall back to Bluetooth settings
+                    try {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                        startActivity(intent)
+                    } catch (e2: Exception) {
+                        Toast.makeText(this, "Unable to open settings", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     /**
@@ -1499,9 +1839,14 @@ class MainActivity : AppCompatActivity() {
                 eqChar = null
                 nameChar = null
                 ledEffectChar = null
+                ledSettingsChar = null
+                soundCtrlChar = null
+                soundDataChar = null
                 otaCtrlChar = null
                 otaDataChar = null
                 isConnected = false
+                // Reset sound status
+                soundStatus = 0
                 // Reset codec info
                 currentCodecName = "Unknown"
                 currentSampleRate = "Unknown"
@@ -1540,10 +1885,16 @@ class MainActivity : AppCompatActivity() {
             eqChar      = controlService?.getCharacteristic(charUuidEq)
             nameChar    = controlService?.getCharacteristic(charUuidName)
             ledEffectChar = controlService?.getCharacteristic(charUuidLedEffect)
+            ledSettingsChar = controlService?.getCharacteristic(charUuidLedSettings)
+            soundCtrlChar = controlService?.getCharacteristic(charUuidSoundCtrl)
+            soundDataChar = controlService?.getCharacteristic(charUuidSoundData)
             levelsChar  = levelsService?.getCharacteristic(charUuidLevels)
             otaCtrlChar = controlService?.getCharacteristic(charUuidOtaCtrl)
             otaDataChar = controlService?.getCharacteristic(charUuidOtaData)
             fwVerChar = controlService?.getCharacteristic(charUuidFwVer)
+
+            // Log discovered characteristics
+            android.util.Log.d("BLE", "Services discovered - soundCtrlChar=${soundCtrlChar != null}, soundDataChar=${soundDataChar != null}, otaDataChar=${otaDataChar != null}")
 
             levelsChar?.let { enableNotifications(gatt, it) }
             eqChar?.let { enableNotifications(gatt, it) }
@@ -1551,6 +1902,8 @@ class MainActivity : AppCompatActivity() {
             nameChar?.let { enableNotifications(gatt, it) }
             fwVerChar?.let { enableNotifications(gatt, it) }
             ledEffectChar?.let { enableNotifications(gatt, it) }
+            ledSettingsChar?.let { enableNotifications(gatt, it) }
+            soundCtrlChar?.let { enableNotifications(gatt, it) }
 
             // Receive PROG: notifications from ESP
             otaCtrlChar?.let { enableNotifications(gatt, it) }
@@ -1595,6 +1948,22 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }, 450)
+
+            handler.postDelayed({
+                bluetoothGatt?.let { current ->
+                    if (current == gatt) {
+                        ledSettingsChar?.let { readCharacteristicCompat(current, it) }
+                    }
+                }
+            }, 550)
+
+            handler.postDelayed({
+                bluetoothGatt?.let { current ->
+                    if (current == gatt) {
+                        soundCtrlChar?.let { readCharacteristicCompat(current, it) }
+                    }
+                }
+            }, 650)
 
             runOnUiThread {
                 tvStatus.text = "Connected"
@@ -1729,6 +2098,26 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                charUuidLedSettings -> {
+                    handleLedSettingsData(raw)
+                }
+
+                charUuidSoundCtrl -> {
+                    if (raw.isNotEmpty()) {
+                        // Check if this is a sound upload ACK (0x81, 0x82, 0x83, or 0xE0)
+                        val firstByte = raw[0].toInt() and 0xFF
+                        if (firstByte >= 0x80) {
+                            handleSoundUploadResponse(raw)
+                        } else {
+                            // Regular sound status update
+                            soundStatus = firstByte
+                            runOnUiThread {
+                                deviceInfoBottomSheet?.updateSoundStatus(soundStatus)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1814,6 +2203,84 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                charUuidLedSettings -> {
+                    handleLedSettingsData(raw)
+                }
+
+                charUuidSoundCtrl -> {
+                    if (raw.isNotEmpty()) {
+                        // Check if this is a sound upload ACK (0x81, 0x82, 0x83, or 0xE0)
+                        val firstByte = raw[0].toInt() and 0xFF
+                        if (firstByte >= 0x80) {
+                            handleSoundUploadResponse(raw)
+                        } else {
+                            // Regular sound status update
+                            soundStatus = firstByte
+                            runOnUiThread {
+                                deviceInfoBottomSheet?.updateSoundStatus(soundStatus)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?,
+            status: Int
+        ) {
+            super.onCharacteristicWrite(gatt, characteristic, status)
+            android.util.Log.d("Sound", "onCharacteristicWrite: uuid=${characteristic?.uuid}, status=$status")
+            if (characteristic?.uuid == charUuidSoundData) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    android.util.Log.d("Sound", "Write complete, calling handleSoundWriteComplete")
+                    handleSoundWriteComplete()
+                } else {
+                    android.util.Log.e("Sound", "onCharacteristicWrite failed: status=$status")
+                    // Still signal completion so we don't hang
+                    handleSoundWriteComplete()
+                }
+            }
+        }
+    }
+
+    private fun handleLedSettingsData(raw: ByteArray) {
+        if (raw.size < 10) return
+        
+        runOnUiThread {
+            updatingLedSettings = true
+            try {
+                // Parse LED settings: [brightness, r1, g1, b1, r2, g2, b2, gradient, speed, effectId]
+                currentLedBrightness = raw[0].toInt() and 0xFF
+                val r1 = raw[1].toInt() and 0xFF
+                val g1 = raw[2].toInt() and 0xFF
+                val b1 = raw[3].toInt() and 0xFF
+                val r2 = raw[4].toInt() and 0xFF
+                val g2 = raw[5].toInt() and 0xFF
+                val b2 = raw[6].toInt() and 0xFF
+                currentGradientType = raw[7].toInt() and 0xFF
+                currentLedSpeed = raw[8].toInt() and 0xFF
+                // raw[9] is effectId, handled by LED effect characteristic
+                
+                currentLedColor1 = Color.rgb(r1, g1, b1)
+                currentLedColor2 = Color.rgb(r2, g2, b2)
+                
+                // Update UI
+                seekLedBrightness.progress = currentLedBrightness
+                tvBrightnessValue.text = currentLedBrightness.toString()
+                viewColor1.setBackgroundColor(currentLedColor1)
+                viewColor2.setBackgroundColor(currentLedColor2)
+                if (currentGradientType < gradientTypeNames.size) {
+                    spinnerGradient.setSelection(currentGradientType)
+                }
+                seekLedSpeed.progress = currentLedSpeed
+                tvSpeedValue.text = currentLedSpeed.toString()
+                
+                android.util.Log.d("LED", "LED settings: brightness=$currentLedBrightness, gradient=$currentGradientType, speed=$currentLedSpeed")
+            } finally {
+                updatingLedSettings = false
             }
         }
     }
@@ -1997,6 +2464,362 @@ class MainActivity : AppCompatActivity() {
                 it.value = value
                 @Suppress("DEPRECATION")
                 bluetoothGatt?.writeCharacteristic(it)
+            }
+        }
+    }
+
+    private fun sendLedSettings() {
+        android.util.Log.d("LED", "sendLedSettings called: isConnected=$isConnected, ledSettingsChar=${ledSettingsChar != null}")
+        if (!isConnected || ledSettingsChar == null || bluetoothGatt == null) {
+            android.util.Log.w("LED", "Cannot send LED settings: isConnected=$isConnected, ledSettingsChar=${ledSettingsChar != null}, gatt=${bluetoothGatt != null}")
+            return
+        }
+
+        // Pack LED settings: [brightness, r1, g1, b1, r2, g2, b2, gradient, speed, effectId]
+        val currentEffectId = spinnerLedEffect.selectedItemPosition
+        val value = byteArrayOf(
+            currentLedBrightness.toByte(),
+            Color.red(currentLedColor1).toByte(),
+            Color.green(currentLedColor1).toByte(),
+            Color.blue(currentLedColor1).toByte(),
+            Color.red(currentLedColor2).toByte(),
+            Color.green(currentLedColor2).toByte(),
+            Color.blue(currentLedColor2).toByte(),
+            currentGradientType.toByte(),
+            currentLedSpeed.toByte(),
+            currentEffectId.toByte()
+        )
+        
+        android.util.Log.d("LED", "Sending LED settings: brightness=$currentLedBrightness, gradient=$currentGradientType, speed=$currentLedSpeed")
+
+        ledSettingsChar?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(
+                    it,
+                    value,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                it.value = value
+                @Suppress("DEPRECATION")
+                bluetoothGatt?.writeCharacteristic(it)
+            }
+        }
+        
+        android.util.Log.d("LED", "Sent LED settings: brightness=$currentLedBrightness, gradient=$currentGradientType")
+    }
+
+    /**
+     * Send sound mute command to ESP32
+     * @param muted true to mute, false to unmute
+     */
+    fun sendSoundMute(muted: Boolean) {
+        android.util.Log.d("Sound", "sendSoundMute called: isConnected=$isConnected, soundCtrlChar=${soundCtrlChar != null}, muted=$muted")
+        if (!isConnected || soundCtrlChar == null || bluetoothGatt == null) {
+            android.util.Log.w("Sound", "Cannot send mute: isConnected=$isConnected, soundCtrlChar=${soundCtrlChar != null}")
+            return
+        }
+
+        // Command format: [cmd=0 (mute), value (0=unmute, 1=mute)]
+        val value = byteArrayOf(0x00, if (muted) 0x01 else 0x00)
+
+        soundCtrlChar?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(
+                    it,
+                    value,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                it.value = value
+                @Suppress("DEPRECATION")
+                bluetoothGatt?.writeCharacteristic(it)
+            }
+        }
+        android.util.Log.d("Sound", "Sent sound mute: $muted")
+    }
+
+    /**
+     * Delete a sound file on ESP32
+     * @param soundType 0=startup, 1=pairing, 2=connected, 3=maxvol
+     */
+    fun sendDeleteSound(soundType: Int) {
+        if (!isConnected || soundCtrlChar == null || bluetoothGatt == null) return
+
+        // Command format: [cmd=1 (delete), soundType]
+        val value = byteArrayOf(0x01, soundType.toByte())
+
+        soundCtrlChar?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(
+                    it,
+                    value,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                it.value = value
+                @Suppress("DEPRECATION")
+                bluetoothGatt?.writeCharacteristic(it)
+            }
+        }
+        android.util.Log.d("Sound", "Sent delete sound: type=$soundType")
+    }
+
+    /**
+     * Upload a sound file to ESP32 via BLE
+     * @param soundType 0=startup, 1=pairing, 2=connected, 3=maxvol
+     * @param data the sound file data (MP3)
+     * @param onProgress callback with progress 0-100
+     * @param onComplete callback when complete (success: Boolean)
+     */
+    
+    // Sound upload state
+    @Volatile private var soundUploadAck: ByteArray? = null
+    private val soundUploadLock = Object()
+    @Volatile private var soundWriteComplete: Boolean = false
+    private val soundWriteLock = Object()
+    
+    fun uploadSoundFile(soundType: Int, data: ByteArray, onProgress: (Int) -> Unit, onComplete: (Boolean) -> Unit) {
+        android.util.Log.d("Sound", "uploadSoundFile called: type=$soundType, size=${data.size}, connected=$isConnected, soundDataChar=${soundDataChar != null}, gatt=${bluetoothGatt != null}")
+        
+        if (!isConnected) {
+            android.util.Log.e("Sound", "Upload failed: not connected")
+            runOnUiThread { onComplete(false) }
+            return
+        }
+        if (soundDataChar == null) {
+            android.util.Log.e("Sound", "Upload failed: soundDataChar is null - characteristic not discovered")
+            runOnUiThread { onComplete(false) }
+            return
+        }
+        if (bluetoothGatt == null) {
+            android.util.Log.e("Sound", "Upload failed: bluetoothGatt is null")
+            runOnUiThread { onComplete(false) }
+            return
+        }
+
+        // Max file size 200KB (WAV at 11025Hz mono = ~9 seconds)
+        if (data.size > 200 * 1024) {
+            android.util.Log.e("Sound", "Sound file too large: ${data.size} bytes (max 200KB)")
+            runOnUiThread { onComplete(false) }
+            return
+        }
+
+        Thread {
+            try {
+                val dataChar = soundDataChar ?: run {
+                    android.util.Log.e("Sound", "Upload failed in thread: soundDataChar became null")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+                val gatt = bluetoothGatt ?: run {
+                    android.util.Log.e("Sound", "Upload failed in thread: gatt became null")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+
+                // New protocol with ACKs:
+                // START: [0x01][soundType][size(4)][reserved(4)]
+                // DATA:  [0x02][seq(2)][len(2)][payload...]
+                // END:   [0x03]
+                // Responses via soundCtrl notification: 0x81=START_OK, 0x82+seq=ACK, 0x83=DONE, 0xE0+code=ERROR
+                
+                val totalSize = data.size
+                
+                // --- Send START packet ---
+                val startPkt = ByteArray(10).apply {
+                    this[0] = 0x01  // START
+                    this[1] = soundType.toByte()
+                    this[2] = (totalSize and 0xFF).toByte()
+                    this[3] = ((totalSize shr 8) and 0xFF).toByte()
+                    this[4] = ((totalSize shr 16) and 0xFF).toByte()
+                    this[5] = ((totalSize shr 24) and 0xFF).toByte()
+                    // Reserved bytes 6-9
+                }
+                
+                soundUploadAck = null
+                android.util.Log.d("Sound", "Sending START packet...")
+                if (!writeSoundPacket(gatt, dataChar, startPkt)) {
+                    android.util.Log.e("Sound", "Failed to write START packet")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+                
+                // Wait for START_OK (0x81)
+                var ack = waitForSoundAck(5000)
+                if (ack == null || ack.isEmpty() || ack[0] != 0x81.toByte()) {
+                    android.util.Log.e("Sound", "No START_OK received: ${ack?.contentToString()}")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+                android.util.Log.d("Sound", "Received START_OK")
+                
+                // --- Send DATA packets ---
+                // ESP32 characteristic max is 512 bytes, so max packet = 512
+                // Packet format: [type(1)][seq(2)][len(2)][payload...] = 5 + payload
+                // So max payload = 512 - 5 = 507 bytes
+                // Also consider MTU: usable MTU payload = MTU - 3 (ATT overhead)
+                val mtuPayload = if (currentMtu > 0) currentMtu - 3 else 20
+                val maxPayload = minOf(mtuPayload - 5, 507).coerceAtLeast(20)  // Cap at 507 (512-5)
+                android.util.Log.d("Sound", "currentMtu=$currentMtu, mtuPayload=$mtuPayload, maxPayload=$maxPayload")
+                
+                var offset = 0
+                var seq = 0
+                
+                while (offset < totalSize && isConnected) {
+                    val chunkLen = minOf(maxPayload, totalSize - offset)
+                    
+                    val dataPkt = ByteArray(5 + chunkLen).apply {
+                        this[0] = 0x02  // DATA
+                        this[1] = (seq and 0xFF).toByte()
+                        this[2] = ((seq shr 8) and 0xFF).toByte()
+                        this[3] = (chunkLen and 0xFF).toByte()
+                        this[4] = ((chunkLen shr 8) and 0xFF).toByte()
+                        System.arraycopy(data, offset, this, 5, chunkLen)
+                    }
+                    
+                    soundUploadAck = null
+                    if (!writeSoundPacket(gatt, dataChar, dataPkt)) {
+                        android.util.Log.e("Sound", "Failed to write DATA packet seq=$seq")
+                        runOnUiThread { onComplete(false) }
+                        return@Thread
+                    }
+                    
+                    // Wait for ACK (0x82 + seq)
+                    ack = waitForSoundAck(5000)
+                    if (ack == null || ack.size < 3 || ack[0] != 0x82.toByte()) {
+                        android.util.Log.e("Sound", "No DATA ACK for seq=$seq: ${ack?.contentToString()}")
+                        runOnUiThread { onComplete(false) }
+                        return@Thread
+                    }
+                    
+                    val ackSeq = (ack[1].toInt() and 0xFF) or ((ack[2].toInt() and 0xFF) shl 8)
+                    if (ackSeq != seq) {
+                        android.util.Log.e("Sound", "ACK seq mismatch: got $ackSeq, expected $seq")
+                        runOnUiThread { onComplete(false) }
+                        return@Thread
+                    }
+                    
+                    offset += chunkLen
+                    seq++
+                    
+                    val progress = (offset * 100) / totalSize
+                    runOnUiThread { onProgress(progress) }
+                }
+                
+                // --- Send END packet ---
+                val endPkt = byteArrayOf(0x03)
+                soundUploadAck = null
+                if (!writeSoundPacket(gatt, dataChar, endPkt)) {
+                    android.util.Log.e("Sound", "Failed to write END packet")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+                
+                // Wait for DONE (0x83)
+                ack = waitForSoundAck(10000)
+                if (ack == null || ack.isEmpty() || ack[0] != 0x83.toByte()) {
+                    android.util.Log.e("Sound", "No DONE received: ${ack?.contentToString()}")
+                    runOnUiThread { onComplete(false) }
+                    return@Thread
+                }
+                
+                android.util.Log.d("Sound", "Sound upload complete: type=$soundType, size=$totalSize")
+                runOnUiThread { onComplete(true) }
+
+            } catch (e: Exception) {
+                android.util.Log.e("Sound", "Sound upload error", e)
+                runOnUiThread { onComplete(false) }
+            }
+        }.start()
+    }
+    
+    @SuppressLint("MissingPermission")
+    private fun writeSoundPacket(gatt: BluetoothGatt, char: BluetoothGattCharacteristic, data: ByteArray): Boolean {
+        // Reset write complete flag
+        synchronized(soundWriteLock) {
+            soundWriteComplete = false
+        }
+        
+        val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(
+                char,
+                data,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            ) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            @Suppress("DEPRECATION")
+            char.value = data
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(char)
+        }
+        
+        if (!success) {
+            android.util.Log.e("Sound", "writeCharacteristic returned false")
+            return false
+        }
+        
+        android.util.Log.d("Sound", "writeCharacteristic queued, waiting for callback...")
+        
+        // Wait for onCharacteristicWrite callback
+        val startTime = System.currentTimeMillis()
+        synchronized(soundWriteLock) {
+            while (!soundWriteComplete && isConnected) {
+                val remaining = 5000L - (System.currentTimeMillis() - startTime)
+                if (remaining <= 0) {
+                    android.util.Log.e("Sound", "Write timeout waiting for callback after ${System.currentTimeMillis() - startTime}ms")
+                    return false
+                }
+                try {
+                    (soundWriteLock as Object).wait(remaining.coerceAtMost(100))
+                } catch (e: InterruptedException) {
+                    return false
+                }
+            }
+        }
+        
+        android.util.Log.d("Sound", "Write callback received, soundWriteComplete=$soundWriteComplete")
+        return soundWriteComplete
+    }
+    
+    // Called from onCharacteristicWrite for soundDataChar
+    private fun handleSoundWriteComplete() {
+        android.util.Log.d("Sound", "handleSoundWriteComplete called")
+        synchronized(soundWriteLock) {
+            soundWriteComplete = true
+            (soundWriteLock as Object).notifyAll()
+        }
+    }
+    
+    private fun waitForSoundAck(timeoutMs: Long): ByteArray? {
+        val startTime = System.currentTimeMillis()
+        synchronized(soundUploadLock) {
+            while (soundUploadAck == null && isConnected) {
+                val remaining = timeoutMs - (System.currentTimeMillis() - startTime)
+                if (remaining <= 0) break
+                try {
+                    (soundUploadLock as Object).wait(remaining.coerceAtMost(100))
+                } catch (e: InterruptedException) {
+                    break
+                }
+            }
+            return soundUploadAck
+        }
+    }
+    
+    // Called from onCharacteristicChanged when soundCtrlChar notification received
+    private fun handleSoundUploadResponse(value: ByteArray) {
+        if (value.isNotEmpty() && value[0].toInt() and 0x80 != 0) {
+            // This is an upload response (0x81, 0x82, 0x83, or 0xE0)
+            android.util.Log.d("Sound", "Upload response: ${value.contentToString()}")
+            synchronized(soundUploadLock) {
+                soundUploadAck = value
+                (soundUploadLock as Object).notifyAll()
             }
         }
     }
