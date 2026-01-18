@@ -959,7 +959,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        try {
+        try {   
             val connectedDevices = a2dp.connectedDevices
             android.util.Log.d("BluetoothCodec", "updateCodecSpinner: ${connectedDevices.size} A2DP devices connected")
         
@@ -2001,6 +2001,13 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         }
+                    } else if (txt.startsWith("CHECK_OK") || txt.startsWith("CHECK_FAIL")) {
+                        // Handle CHECK response
+                        synchronized(otaCheckLock) {
+                            otaCheckResponse = txt
+                            (otaCheckLock as Object).notifyAll()
+                        }
+                        android.util.Log.d("OTA", "Received CHECK response: $txt")
                     }
                 }
 
@@ -2241,6 +2248,15 @@ class MainActivity : AppCompatActivity() {
                     android.util.Log.e("Sound", "onCharacteristicWrite failed: status=$status")
                     // Still signal completion so we don't hang
                     handleSoundWriteComplete()
+                }
+            } else if (characteristic?.uuid == charUuidOtaData) {
+                // OTA data write completed (with ACK)
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    android.util.Log.d("OTA", "OTA data write ACK received")
+                    handleOtaWriteComplete(true)
+                } else {
+                    android.util.Log.e("OTA", "OTA data write failed: status=$status")
+                    handleOtaWriteComplete(false)
                 }
             }
         }
@@ -2582,6 +2598,14 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var soundWriteComplete: Boolean = false
     private val soundWriteLock = Object()
     
+    // OTA upload state - write with ACK for reliable transfer
+    @Volatile private var otaWriteComplete: Boolean = false
+    private val otaWriteLock = Object()
+    
+    // OTA CHECK response state
+    @Volatile private var otaCheckResponse: String? = null
+    private val otaCheckLock = Object()
+    
     fun uploadSoundFile(soundType: Int, data: ByteArray, onProgress: (Int) -> Unit, onComplete: (Boolean) -> Unit) {
         android.util.Log.d("Sound", "uploadSoundFile called: type=$soundType, size=${data.size}, connected=$isConnected, soundDataChar=${soundDataChar != null}, gatt=${bluetoothGatt != null}")
         
@@ -2796,6 +2820,85 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    // Called from onCharacteristicWrite for otaDataChar
+    private fun handleOtaWriteComplete(success: Boolean) {
+        synchronized(otaWriteLock) {
+            otaWriteComplete = success
+            (otaWriteLock as Object).notifyAll()
+        }
+    }
+    
+    // Write OTA data chunk and wait for ACK (reliable transfer)
+    private fun writeOtaDataWithAck(gatt: BluetoothGatt, char: BluetoothGattCharacteristic, data: ByteArray): Boolean {
+        synchronized(otaWriteLock) {
+            otaWriteComplete = false
+        }
+        
+        // Write with response (not no-response)
+        val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(
+                char,
+                data,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            ) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            @Suppress("DEPRECATION")
+            char.value = data
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(char)
+        }
+        
+        if (!success) {
+            android.util.Log.e("OTA", "writeCharacteristic failed to queue")
+            return false
+        }
+        
+        // Wait for onCharacteristicWrite callback (ACK from ESP32)
+        val startTime = System.currentTimeMillis()
+        synchronized(otaWriteLock) {
+            while (!otaWriteComplete && isConnected) {
+                val remaining = 5000L - (System.currentTimeMillis() - startTime)
+                if (remaining <= 0) {
+                    android.util.Log.e("OTA", "Write timeout waiting for ACK")
+                    return false
+                }
+                try {
+                    (otaWriteLock as Object).wait(remaining.coerceAtMost(100))
+                } catch (e: InterruptedException) {
+                    return false
+                }
+            }
+        }
+        
+        return otaWriteComplete
+    }
+    
+    // Write OTA data chunk without waiting for ACK (fast transfer)
+    private fun writeOtaDataNoResponse(gatt: BluetoothGatt, char: BluetoothGattCharacteristic, data: ByteArray): Boolean {
+        // Write without response (fast, no ACK)
+        val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(
+                char,
+                data,
+                BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            ) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            @Suppress("DEPRECATION")
+            char.value = data
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(char)
+        }
+        
+        if (!success) {
+            android.util.Log.e("OTA", "writeCharacteristic (no-response) failed to queue")
+        }
+        return success
+    }
+    
     private fun waitForSoundAck(timeoutMs: Long): ByteArray? {
         val startTime = System.currentTimeMillis()
         synchronized(soundUploadLock) {
@@ -2906,17 +3009,25 @@ class MainActivity : AppCompatActivity() {
                     throw Exception("OTA cancelled - disconnected")
                 }
 
-                // --- stream firmware with no-response writes ---
+                // --- stream firmware with BATCHED ACK for speed + reliability ---
+                // Send 16 chunks fast, then wait for ACK on 16th chunk
                 val input = contentResolver.openInputStream(uri)
                     ?: throw Exception("Cannot open input stream")
 
-                // payload MTU - 3 (ATT header). Clamp to [20, 512]
-                val maxChunk = (currentMtu - 3).coerceIn(20, 512)
-                val buffer = ByteArray(maxChunk)
+                // payload MTU - 3 (ATT header) - 2 (seq number). Clamp to [20, 510]
+                val maxPayload = (currentMtu - 3 - 2).coerceIn(20, 510)
+                val buffer = ByteArray(maxPayload)
 
                 var total = 0L
                 var lastUiUpdate = 0L
+                val maxRetries = 3
 
+                // Fast + Reliable: Use Write No Response for speed, but ACK every N packets
+                // The ACK forces a sync point, ensuring all previous packets are processed in order
+                val ackEveryN = 8  // ACK every 8th packet
+                val delayMs = 2L   // 2ms between no-response packets
+                var chunkCount = 0
+                
                 while (true) {
                     // Check if cancelled or disconnected
                     if (otaCancelled || !isConnected) {
@@ -2928,12 +3039,41 @@ class MainActivity : AppCompatActivity() {
                     if (read <= 0) break
 
                     val chunk = buffer.copyOf(read)
-                    writeCharNoResp(gattNN, otaDataNN, chunk)
+                    chunkCount++
+                    
+                    // ACK every Nth packet to force sync and ensure ordering
+                    val useAck = (chunkCount % ackEveryN == 0)
+                    
+                    var writeSuccess = false
+                    var retryCount = 0
+                    val maxWriteRetries = 10  // More retries for buffer-full scenarios
+                    while (!writeSuccess && retryCount < maxWriteRetries) {
+                        writeSuccess = if (useAck) {
+                            writeOtaDataWithAck(gattNN, otaDataNN, chunk)
+                        } else {
+                            writeOtaDataNoResponse(gattNN, otaDataNN, chunk)
+                        }
+                        if (!writeSuccess) {
+                            retryCount++
+                            // Buffer likely full - wait longer with backoff
+                            val waitTime = if (retryCount < 3) 10L else 30L
+                            Thread.sleep(waitTime)
+                        }
+                    }
+                    if (!writeSuccess) {
+                        input.close()
+                        throw Exception("OTA write failed after $maxWriteRetries retries")
+                    }
+                    
+                    // Small delay for no-response packets to prevent buffer overflow
+                    if (!useAck) {
+                        Thread.sleep(delayMs)
+                    }
 
                     total += read
 
-                    // UI status every ~2KB
-                    if (total - lastUiUpdate >= 2048 || total == fileSize) {
+                    // UI status every ~8KB
+                    if (total - lastUiUpdate >= 8192 || total == fileSize) {
                         lastUiUpdate = total
                         val percent = ((total * 100) / fileSize).toInt().coerceIn(0, 100)
                         runOnUiThread {
@@ -2941,29 +3081,119 @@ class MainActivity : AppCompatActivity() {
                             tvOtaStatus.text = "Sending: ${total / 1024} / ${fileSize / 1024} KB ($percent%)"
                         }
                     }
-
-                    // PROGRESS-BASED THROTTLING
-                    val espProgress = espOtaBytes
-                    val ahead = total - espProgress
-
-                    val window1 = 32L * maxChunk
-                    val window2 = 64L * maxChunk
-                    val window3 = 128L * maxChunk
-
-                    when {
-                        ahead > window3 -> Thread.sleep(20)
-                        ahead > window2 -> Thread.sleep(30)
-                        ahead > window1 -> Thread.sleep(40)
-                        else            -> Thread.sleep(20)
+                }
+                
+                // Send a final ACK write to flush any remaining packets
+                val flushChunk = ByteArray(1) { 0 }
+                writeOtaDataWithAck(gattNN, otaDataNN, flushChunk)
+                
+                input.close()
+                
+                // At 99%+ wait extra for ESP32 to catch up
+                runOnUiThread {
+                    tvOtaStatus.text = "Waiting for ESP32 to catch up..."
+                }
+                Thread.sleep(1000)
+                
+                // Verify transfer with CHECK command - retry up to 3 times
+                var checkAttempts = 0
+                val maxCheckAttempts = 3
+                var transferVerified = false
+                
+                while (!transferVerified && checkAttempts < maxCheckAttempts) {
+                    checkAttempts++
+                    
+                    // Clear previous response
+                    synchronized(otaCheckLock) {
+                        otaCheckResponse = null
+                    }
+                    
+                    // Send CHECK command
+                    runOnUiThread {
+                        tvOtaStatus.text = "Verifying transfer (attempt $checkAttempts)..."
+                    }
+                    val checkCmd = "CHECK:$fileSize".toByteArray(Charsets.UTF_8)
+                    android.util.Log.d("OTA", "Sending CHECK command, expecting $fileSize bytes (attempt $checkAttempts)")
+                    writeCharSimple(gattNN, otaCtrlNN, checkCmd)
+                    
+                    // Wait for response with timeout
+                    val checkTimeout = 3000L
+                    val checkStart = System.currentTimeMillis()
+                    var response: String? = null
+                    
+                    synchronized(otaCheckLock) {
+                        while (otaCheckResponse == null && System.currentTimeMillis() - checkStart < checkTimeout) {
+                            try {
+                                (otaCheckLock as Object).wait(100)
+                            } catch (_: InterruptedException) {}
+                        }
+                        response = otaCheckResponse
+                    }
+                    
+                    if (response == null) {
+                        android.util.Log.w("OTA", "No CHECK response received, attempt $checkAttempts")
+                        Thread.sleep(500)
+                        continue
+                    }
+                    
+                    if (response!!.startsWith("CHECK_OK")) {
+                        android.util.Log.d("OTA", "CHECK_OK - all bytes received")
+                        transferVerified = true
+                    } else if (response!!.startsWith("CHECK_FAIL:")) {
+                        // Parse missing bytes: CHECK_FAIL:<received_bytes>
+                        val receivedStr = response!!.removePrefix("CHECK_FAIL:")
+                        val received = receivedStr.toLongOrNull() ?: 0L
+                        val missing = fileSize - received
+                        
+                        android.util.Log.w("OTA", "CHECK_FAIL: received $received, missing $missing bytes")
+                        
+                        runOnUiThread {
+                            tvOtaStatus.text = "Missing $missing bytes, resending..."
+                        }
+                        
+                        // Resend the missing portion from the file
+                        if (missing > 0 && missing < fileSize) {
+                            val resendInput = contentResolver.openInputStream(uri)
+                            if (resendInput != null) {
+                                // Skip to the position where data is missing
+                                resendInput.skip(received)
+                                
+                                var resent = 0L
+                                val resendBuffer = ByteArray(512)
+                                
+                                while (resent < missing) {
+                                    val readCount = resendInput.read(resendBuffer)
+                                    if (readCount <= 0) break
+                                    
+                                    val chunk = resendBuffer.copyOf(readCount)
+                                    
+                                    // Use ACK for all resent chunks
+                                    var success = writeOtaDataWithAck(gattNN, otaDataNN, chunk)
+                                    if (!success) {
+                                        // Retry once
+                                        Thread.sleep(50)
+                                        success = writeOtaDataWithAck(gattNN, otaDataNN, chunk)
+                                    }
+                                    if (!success) {
+                                        android.util.Log.e("OTA", "Failed to resend chunk at offset ${received + resent}")
+                                        break
+                                    }
+                                    resent += readCount
+                                }
+                                
+                                resendInput.close()
+                                android.util.Log.d("OTA", "Resent $resent bytes")
+                                
+                                // Wait for ESP32 to process resent data
+                                Thread.sleep(500)
+                            }
+                        }
                     }
                 }
-
-                // Wait for ESP32 to finish writing
-                runOnUiThread {
-                    tvOtaStatus.text = "Waiting for ESP32 to finish..."
+                
+                if (!transferVerified) {
+                    throw Exception("Transfer verification failed after $maxCheckAttempts attempts")
                 }
-                Thread.sleep(2000)
-                input.close()
 
                 // Check again before sending END
                 if (otaCancelled || !isConnected) {
@@ -2971,6 +3201,9 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // --- END ---
+                runOnUiThread {
+                    tvOtaStatus.text = "Finalizing OTA..."
+                }
                 val endCmd = "END".toByteArray(Charsets.UTF_8)
                 writeCharSimple(gattNN, otaCtrlNN, endCmd)
 

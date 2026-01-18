@@ -70,9 +70,12 @@ Choose from 21 audio-reactive visualization effects for the 16x16 WS2812B LED ma
 
 ###  Over-the-Air Firmware Updates
 - Select firmware binary (.bin) from device storage
-- High-speed BLE transfer using Write-No-Response
+- **Fast + Reliable BLE transfer** (~60 seconds for 2MB)
+  - Batched ACK: 7 fast writes + 1 ACK per 8 packets
+  - Automatic retry with backoff on buffer-full
+- **Transfer verification** with CHECK command before finalize
 - Real-time progress bar with KB transferred
-- Progress-based throttling for reliable transfers
+- Auto-finalize fallback (3s timeout after CHECK_OK)
 - Automatic ESP32 reboot on completion
 
 ###  User Interface
