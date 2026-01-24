@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bdk_card_glass"
+    android:clipChildren="true"
+    android:clipToPadding="false"
+    android:clipToOutline="true"
+    android:outlineProvider="background">
+
+    <!-- Live Effect Preview Background - fills entire container -->
+    <com.example.myspeaker.LedEffectPreviewView
+        android:id="@+id/effectPreviewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="fill"
+        android:alpha="0.85" />
+
+    <!-- Content -->
+    <LinearLayout
+        android:id="@+id/effectContentLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Effect Selector - Expandable -->
+        <LinearLayout
+            android:id="@+id/effectSelectorContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bdk_spinner_bg"
+            android:clipToOutline="true"
+            android:outlineProvider="background"
+            android:clipChildren="true"
+            android:clipToPadding="true">
+
+            <!-- Header with current selection (clickable to expand) -->
+            <LinearLayout
+                android:id="@+id/effectSelectorHeader"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="12dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/tvSelectedEffect"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Spectrum Bars"
+                    android:textSize="16sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <ImageView
+                    android:id="@+id/ivEffectDropdown"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_chevron_down"
+                    android:padding="2dp"
+                    android:rotation="0" />
+            </LinearLayout>
+
+            <!-- Expandable effects list -->
+            <LinearLayout
+                android:id="@+id/effectListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:clipChildren="true"
+                android:clipToPadding="false">
+
+                <!-- Effects list with max height to ensure scrolling -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvEffectList"
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:overScrollMode="always"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    android:nestedScrollingEnabled="true"
+                    android:clipChildren="true"
+                    android:clipToPadding="false" />
+            </LinearLayout>
+        </LinearLayout>
+
+    <!-- Quick Effect Buttons (Most Popular) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="QUICK SELECT"
+        android:textSize="11sp"
+        android:textColor="@color/bdk_text_tertiary"
+        android:letterSpacing="0.15"
+        android:layout_marginTop="20dp" />
+
+    <!-- Row 1: Popular reactive effects -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <FrameLayout
+            android:id="@+id/effectSpectrumBars"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Spectrum"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/effectBeatPulse"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💓"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Beat Pulse"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/effectBassReactor"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎵"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bass"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Row 2: Visual effects -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <FrameLayout
+            android:id="@+id/effectRainbowWave"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🌈"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rainbow"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/effectAmbient"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✨"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ambient"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/effectOff"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:background="@drawable/bdk_preset_item_bg"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⭕"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Off"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_primary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Brightness Control -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BRIGHTNESS"
+        android:textSize="11sp"
+        android:textColor="@color/bdk_text_tertiary"
+        android:letterSpacing="0.15"
+        android:layout_marginTop="24dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+
+        <SeekBar
+            android:id="@+id/seekBrightness"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="100"
+            android:progress="100"
+            android:progressTint="@color/bdk_accent_primary"
+            android:thumbTint="@color/bdk_accent_primary" />
+
+        <TextView
+            android:id="@+id/tvBrightness"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="100"
+            android:textColor="@color/bdk_text_primary"
+            android:textSize="16sp"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Ambient Controls Container - Only visible when Ambient effect is selected -->
+    <LinearLayout
+        android:id="@+id/ambientControlsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- Speed Control (Ambient only) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ANIMATION SPEED"
+            android:textSize="11sp"
+            android:textColor="@color/bdk_text_tertiary"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="20dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekLedSpeed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="50"
+                android:progressTint="@color/bdk_accent_primary"
+                android:thumbTint="@color/bdk_accent_primary" />
+
+            <TextView
+                android:id="@+id/tvLedSpeed"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:text="50"
+                android:textColor="@color/bdk_text_primary"
+                android:textSize="16sp"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <!-- Color Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="COLORS"
+            android:textSize="11sp"
+            android:textColor="@color/bdk_text_tertiary"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="20dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <!-- Color 1 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Primary"
+                    android:textSize="12sp"
+                    android:textColor="@color/bdk_text_secondary" />
+
+                <View
+                    android:id="@+id/viewColor1"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bdk_color_preview_bg" />
+            </LinearLayout>
+
+            <!-- Color 2 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Secondary"
+                    android:textSize="12sp"
+                    android:textColor="@color/bdk_text_secondary" />
+
+                <View
+                    android:id="@+id/viewColor2"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bdk_color_preview_bg" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Gradient Type -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GRADIENT"
+            android:textSize="11sp"
+            android:textColor="@color/bdk_text_tertiary"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="20dp" />
+
+        <Spinner
+            android:id="@+id/spinnerGradient"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bdk_spinner_bg"
+            android:popupBackground="@color/bdk_background_secondary"
+            android:dropDownWidth="match_parent" />
+
+    </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

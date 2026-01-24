@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spectrum Bars effect preview - vertical gradient bars -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#1A1A1A" />
+        </shape>
+    </item>
+    <!-- Blur effect overlay with spectrum colors -->
+    <item android:left="8dp" android:right="8dp" android:top="20dp" android:bottom="20dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#4000FF00"
+                android:centerColor="#4000FFFF"
+                android:endColor="#40FF00FF" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <!-- Subtle border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="1dp" android:color="#333333" />
+        </shape>
+    </item>
+</layer-list>

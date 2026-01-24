@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/background_dark"
+    android:background="@color/bdk_background_primary"
     android:fillViewport="true">
 
     <LinearLayout
@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_card_modern"
+            android:background="@drawable/bdk_card_glass"
             android:padding="20dp"
             android:layout_marginBottom="16dp">
 
@@ -27,8 +27,8 @@
                 android:text="CONNECTION STATUS"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="12dp" />
 
             <LinearLayout
@@ -41,7 +41,7 @@
                     android:id="@+id/statusIndicator"
                     android:layout_width="10dp"
                     android:layout_height="10dp"
-                    android:background="@drawable/status_dot_connected"
+                    android:background="@drawable/bdk_status_dot"
                     android:layout_marginEnd="10dp" />
 
                 <TextView
@@ -51,7 +51,7 @@
                     android:text="Connected"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="@color/success" />
+                    android:textColor="@color/bdk_status_connected" />
 
             </LinearLayout>
 
@@ -62,7 +62,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_card_modern"
+            android:background="@drawable/bdk_card_glass"
             android:padding="20dp"
             android:layout_marginBottom="16dp">
 
@@ -72,8 +72,8 @@
                 android:text="DEVICE DETAILS"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="16dp" />
 
             <!-- Device Name Row -->
@@ -89,7 +89,7 @@
                     android:layout_height="wrap_content"
                     android:text="Device Name"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvDeviceName"
@@ -97,14 +97,14 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <!-- Firmware Version Row -->
@@ -120,7 +120,7 @@
                     android:layout_height="wrap_content"
                     android:text="Firmware Version"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvFirmwareVersion"
@@ -128,7 +128,7 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
@@ -139,7 +139,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_card_modern"
+            android:background="@drawable/bdk_card_glass"
             android:padding="20dp"
             android:layout_marginBottom="16dp">
 
@@ -149,8 +149,8 @@
                 android:text="TECHNICAL INFO"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="16dp" />
 
             <!-- Connection Type Row -->
@@ -166,7 +166,7 @@
                     android:layout_height="wrap_content"
                     android:text="Connection Type"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvConnectionType"
@@ -174,7 +174,7 @@
                     android:layout_height="wrap_content"
                     android:text="Bluetooth LE"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
@@ -185,7 +185,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_card_modern"
+            android:background="@drawable/bdk_card_glass"
             android:padding="20dp"
             android:layout_marginBottom="16dp">
 
@@ -195,8 +195,8 @@
                 android:text="AUDIO INFO"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="16dp" />
 
             <!-- Codec Row -->
@@ -212,7 +212,7 @@
                     android:layout_height="wrap_content"
                     android:text="Codec"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvCodecName"
@@ -220,14 +220,14 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/primary" />
+                    android:textColor="@color/bdk_accent_primary" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <!-- Sample Rate Row -->
@@ -243,7 +243,7 @@
                     android:layout_height="wrap_content"
                     android:text="Sample Rate"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvSampleRate"
@@ -251,14 +251,14 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <!-- Bits Per Sample Row -->
@@ -274,7 +274,7 @@
                     android:layout_height="wrap_content"
                     android:text="Bit Depth"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvBitsPerSample"
@@ -282,14 +282,14 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <!-- Channel Mode Row -->
@@ -305,7 +305,7 @@
                     android:layout_height="wrap_content"
                     android:text="Channel Mode"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvChannelMode"
@@ -313,14 +313,14 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <!-- Playback Quality Row -->
@@ -336,7 +336,7 @@
                     android:layout_height="wrap_content"
                     android:text="Playback Quality"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="@color/bdk_text_secondary" />
 
                 <TextView
                     android:id="@+id/tvPlaybackQuality"
@@ -344,7 +344,7 @@
                     android:layout_height="wrap_content"
                     android:text="Unknown"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
             </LinearLayout>
 
@@ -355,7 +355,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_card_modern"
+            android:background="@drawable/bdk_card_glass"
             android:padding="20dp"
             android:layout_marginBottom="16dp">
 
@@ -365,8 +365,8 @@
                 android:text="SOUND EFFECTS"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="12dp" />
 
             <!-- Mute Sound Effects -->
@@ -375,14 +375,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Mute Sound Effects"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/bdk_text_primary"
                 android:textSize="14sp"
                 android:paddingVertical="8dp" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/divider"
+                android:background="@color/bdk_divider"
                 android:layout_marginVertical="12dp" />
 
             <TextView
@@ -391,8 +391,8 @@
                 android:text="UPLOAD SOUNDS"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_disabled"
-                android:letterSpacing="0.1"
+                android:textColor="@color/bdk_text_tertiary"
+                android:letterSpacing="0.15"
                 android:paddingBottom="8dp" />
 
             <!-- Startup Sound -->
@@ -409,7 +409,7 @@
                     android:layout_height="wrap_content"
                     android:text="Startup Sound"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
                 <TextView
                     android:id="@+id/tvStartupStatus"
@@ -417,16 +417,16 @@
                     android:layout_height="wrap_content"
                     android:text="Not Set"
                     android:textSize="12sp"
-                    android:textColor="@color/text_disabled"
+                    android:textColor="@color/bdk_text_tertiary"
                     android:paddingEnd="8dp" />
 
                 <Button
                     android:id="@+id/btnUploadStartup"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:background="@drawable/btn_secondary"
+                    android:background="@drawable/bdk_btn_secondary"
                     android:text="Upload"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/bdk_text_primary"
                     android:textAllCaps="false"
                     android:textSize="12sp"
                     android:paddingHorizontal="16dp" />
@@ -447,7 +447,7 @@
                     android:layout_height="wrap_content"
                     android:text="Pairing Sound"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
                 <TextView
                     android:id="@+id/tvPairingStatus"
@@ -455,16 +455,16 @@
                     android:layout_height="wrap_content"
                     android:text="Not Set"
                     android:textSize="12sp"
-                    android:textColor="@color/text_disabled"
+                    android:textColor="@color/bdk_text_tertiary"
                     android:paddingEnd="8dp" />
 
                 <Button
                     android:id="@+id/btnUploadPairing"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:background="@drawable/btn_secondary"
+                    android:background="@drawable/bdk_btn_secondary"
                     android:text="Upload"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/bdk_text_primary"
                     android:textAllCaps="false"
                     android:textSize="12sp"
                     android:paddingHorizontal="16dp" />
@@ -485,7 +485,7 @@
                     android:layout_height="wrap_content"
                     android:text="Connected Sound"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
                 <TextView
                     android:id="@+id/tvConnectedStatus"
@@ -493,16 +493,16 @@
                     android:layout_height="wrap_content"
                     android:text="Not Set"
                     android:textSize="12sp"
-                    android:textColor="@color/text_disabled"
+                    android:textColor="@color/bdk_text_tertiary"
                     android:paddingEnd="8dp" />
 
                 <Button
                     android:id="@+id/btnUploadConnected"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:background="@drawable/btn_secondary"
+                    android:background="@drawable/bdk_btn_secondary"
                     android:text="Upload"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/bdk_text_primary"
                     android:textAllCaps="false"
                     android:textSize="12sp"
                     android:paddingHorizontal="16dp" />
@@ -523,7 +523,7 @@
                     android:layout_height="wrap_content"
                     android:text="Max Volume Sound"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/bdk_text_primary" />
 
                 <TextView
                     android:id="@+id/tvMaxVolStatus"
@@ -531,16 +531,16 @@
                     android:layout_height="wrap_content"
                     android:text="Not Set"
                     android:textSize="12sp"
-                    android:textColor="@color/text_disabled"
+                    android:textColor="@color/bdk_text_tertiary"
                     android:paddingEnd="8dp" />
 
                 <Button
                     android:id="@+id/btnUploadMaxVol"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:background="@drawable/btn_secondary"
+                    android:background="@drawable/bdk_btn_secondary"
                     android:text="Upload"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/bdk_text_primary"
                     android:textAllCaps="false"
                     android:textSize="12sp"
                     android:paddingHorizontal="16dp" />
@@ -557,19 +557,19 @@
                 android:max="100"
                 android:progress="0"
                 android:visibility="gone"
-                android:progressTint="@color/primary"
-                android:progressBackgroundTint="@color/divider" />
+                android:progressTint="@color/bdk_accent_primary"
+                android:progressBackgroundTint="@color/bdk_divider" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Long press to delete a sound"
                 android:textSize="11sp"
-                android:textColor="@color/text_disabled"
+                android:textColor="@color/bdk_text_tertiary"
                 android:gravity="center"
                 android:paddingTop="12dp" />
 
         </LinearLayout>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

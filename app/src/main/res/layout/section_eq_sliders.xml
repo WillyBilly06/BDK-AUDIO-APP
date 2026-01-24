@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bdk_card_glass"
+    android:padding="20dp">
+
+    <!-- Bass -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="56dp"
+            android:layout_height="wrap_content"
+            android:text="Bass"
+            android:textSize="14sp"
+            android:textColor="@color/bdk_text_primary" />
+
+        <SeekBar
+            android:id="@+id/seekBass"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="24"
+            android:progress="12"
+            android:progressTint="@color/bdk_eq_bass"
+            android:thumbTint="@color/bdk_eq_bass"
+            android:layout_marginHorizontal="12dp" />
+
+        <TextView
+            android:id="@+id/tvBassLabel"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="0 dB"
+            android:textSize="13sp"
+            android:textColor="@color/bdk_accent_primary"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Mid -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="56dp"
+            android:layout_height="wrap_content"
+            android:text="Mid"
+            android:textSize="14sp"
+            android:textColor="@color/bdk_text_primary" />
+
+        <SeekBar
+            android:id="@+id/seekMid"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="24"
+            android:progress="12"
+            android:progressTint="@color/bdk_accent_primary"
+            android:thumbTint="@color/bdk_accent_primary"
+            android:layout_marginHorizontal="12dp" />
+
+        <TextView
+            android:id="@+id/tvMidLabel"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="0 dB"
+            android:textSize="13sp"
+            android:textColor="@color/bdk_accent_primary"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Treble -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="56dp"
+            android:layout_height="wrap_content"
+            android:text="Treble"
+            android:textSize="14sp"
+            android:textColor="@color/bdk_text_primary" />
+
+        <SeekBar
+            android:id="@+id/seekTreble"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="24"
+            android:progress="12"
+            android:progressTint="@color/bdk_eq_bright"
+            android:thumbTint="@color/bdk_eq_bright"
+            android:layout_marginHorizontal="12dp" />
+
+        <TextView
+            android:id="@+id/tvTrebleLabel"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="0 dB"
+            android:textSize="13sp"
+            android:textColor="@color/bdk_accent_primary"
+            android:gravity="end" />
+    </LinearLayout>
+
+</LinearLayout>

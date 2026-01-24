@@ -12,18 +12,21 @@ import java.nio.ByteOrder
 
 /**
  * Converts audio files (MP3, etc) to WAV format optimized for ESP32 playback.
- * Output format: 16-bit PCM, mono, 22050 Hz (small size, good quality)
+ * Output format: 16-bit PCM, mono, dynamically adjusted sample rate to fit 200KB limit.
  */
 object AudioConverter {
     private const val TAG = "AudioConverter"
     
-    // Target WAV parameters - optimized for small file size with good quality
-    private const val TARGET_SAMPLE_RATE = 11025  // Low sample rate for small files
+    // Target WAV parameters - will be adjusted if file too large
+    private const val PREFERRED_SAMPLE_RATE = 22050  // Good quality default
+    private const val MIN_SAMPLE_RATE = 8000         // Minimum acceptable quality
     private const val TARGET_CHANNELS = 1
     private const val TARGET_BITS_PER_SAMPLE = 16
     
-    // Max file size for upload (200KB = ~9 seconds at 11025Hz mono 16-bit)
+    // Max file size for upload (200KB)
     private const val MAX_OUTPUT_SIZE = 200 * 1024
+    // Max audio data (excluding 44-byte header)
+    private const val MAX_AUDIO_DATA = MAX_OUTPUT_SIZE - 44
     
     data class ConversionResult(
         val success: Boolean,
@@ -131,17 +134,13 @@ object AudioConverter {
             val rawPcm = pcmData.toByteArray()
             Log.d(TAG, "Decoded ${rawPcm.size} bytes of PCM data")
             
-            // Convert to target format
-            val converted = resampleAndConvert(rawPcm, inputSampleRate, inputChannels)
+            // Convert to target format with dynamic sample rate adjustment
+            val (converted, usedSampleRate) = resampleToFit(rawPcm, inputSampleRate, inputChannels)
             
             // Create WAV file
-            val wavData = createWavFile(converted)
+            val wavData = createWavFile(converted, usedSampleRate)
             
-            if (wavData.size > MAX_OUTPUT_SIZE) {
-                return ConversionResult(false, errorMessage = "Converted file too large (${wavData.size / 1024}KB, max 200KB)")
-            }
-            
-            Log.d(TAG, "Conversion complete: ${wavData.size} bytes WAV")
+            Log.d(TAG, "Conversion complete: ${wavData.size} bytes WAV at ${usedSampleRate}Hz")
             return ConversionResult(true, wavData, originalFormat = mime)
             
         } catch (e: Exception) {
@@ -173,13 +172,10 @@ object AudioConverter {
                 rawData
             }
             
-            val converted = resampleAndConvert(pcmData, sampleRate, channels)
-            val wavData = createWavFile(converted)
+            val (converted, usedSampleRate) = resampleToFit(pcmData, sampleRate, channels)
+            val wavData = createWavFile(converted, usedSampleRate)
             
-            if (wavData.size > MAX_OUTPUT_SIZE) {
-                return ConversionResult(false, errorMessage = "File too large (${wavData.size / 1024}KB, max 200KB)")
-            }
-            
+            Log.d(TAG, "WAV conversion complete: ${wavData.size} bytes at ${usedSampleRate}Hz")
             ConversionResult(true, wavData, originalFormat = "audio/wav")
         } catch (e: Exception) {
             ConversionResult(false, errorMessage = e.message)
@@ -187,9 +183,10 @@ object AudioConverter {
     }
     
     /**
-     * Resample and convert to mono 22kHz 16-bit
+     * Resample and convert to mono with dynamic sample rate to fit within MAX_OUTPUT_SIZE.
+     * Returns the resampled data and the sample rate used.
      */
-    private fun resampleAndConvert(pcmData: ByteArray, inputSampleRate: Int, inputChannels: Int): ShortArray {
+    private fun resampleToFit(pcmData: ByteArray, inputSampleRate: Int, inputChannels: Int): Pair<ShortArray, Int> {
         // Convert bytes to shorts (16-bit samples)
         val inputSamples = ShortArray(pcmData.size / 2)
         ByteBuffer.wrap(pcmData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(inputSamples)
@@ -207,13 +204,64 @@ object AudioConverter {
             inputSamples
         }
         
-        // Resample to target rate
-        if (inputSampleRate == TARGET_SAMPLE_RATE) {
-            return monoSamples
+        // Calculate duration in seconds
+        val durationSecs = monoSamples.size.toDouble() / inputSampleRate
+        Log.d(TAG, "Audio duration: %.2f seconds, mono samples: ${monoSamples.size}".format(durationSecs))
+        
+        // Calculate max samples that fit in MAX_AUDIO_DATA (2 bytes per sample)
+        val maxSamples = MAX_AUDIO_DATA / 2
+        
+        // Try sample rates from high to low until it fits
+        val sampleRatesToTry = listOf(22050, 16000, 11025, 8000)
+        
+        for (targetRate in sampleRatesToTry) {
+            val resampleRatio = inputSampleRate.toDouble() / targetRate
+            val outputLength = (monoSamples.size / resampleRatio).toInt()
+            
+            // Check if this fits
+            if (outputLength <= maxSamples) {
+                Log.d(TAG, "Using sample rate $targetRate Hz (${outputLength * 2} bytes)")
+                val resampled = resampleTo(monoSamples, inputSampleRate, targetRate)
+                return Pair(resampled, targetRate)
+            }
         }
         
-        val resampleRatio = inputSampleRate.toDouble() / TARGET_SAMPLE_RATE
-        val outputLength = (monoSamples.size / resampleRatio).toInt()
+        // Even at min sample rate it's too long - truncate
+        Log.w(TAG, "Audio too long, truncating to fit at ${MIN_SAMPLE_RATE}Hz")
+        val resampleRatio = inputSampleRate.toDouble() / MIN_SAMPLE_RATE
+        val fullOutputLength = (monoSamples.size / resampleRatio).toInt()
+        
+        // Truncate input to fit
+        val maxInputSamples = (maxSamples * resampleRatio).toInt()
+        val truncatedMono = if (monoSamples.size > maxInputSamples) {
+            monoSamples.copyOfRange(0, maxInputSamples)
+        } else {
+            monoSamples
+        }
+        
+        val resampled = resampleTo(truncatedMono, inputSampleRate, MIN_SAMPLE_RATE)
+        val finalSamples = if (resampled.size > maxSamples) {
+            resampled.copyOfRange(0, maxSamples)
+        } else {
+            resampled
+        }
+        
+        val truncatedDuration = finalSamples.size.toDouble() / MIN_SAMPLE_RATE
+        Log.d(TAG, "Truncated to %.2f seconds at ${MIN_SAMPLE_RATE}Hz".format(truncatedDuration))
+        
+        return Pair(finalSamples, MIN_SAMPLE_RATE)
+    }
+    
+    /**
+     * Resample to target rate using linear interpolation
+     */
+    private fun resampleTo(samples: ShortArray, fromRate: Int, toRate: Int): ShortArray {
+        if (fromRate == toRate) {
+            return samples
+        }
+        
+        val resampleRatio = fromRate.toDouble() / toRate
+        val outputLength = (samples.size / resampleRatio).toInt()
         val resampled = ShortArray(outputLength)
         
         for (i in 0 until outputLength) {
@@ -221,8 +269,8 @@ object AudioConverter {
             val srcIdx = srcPos.toInt()
             val frac = srcPos - srcIdx
             
-            val s0 = monoSamples.getOrElse(srcIdx) { 0 }.toInt()
-            val s1 = monoSamples.getOrElse(srcIdx + 1) { s0.toShort() }.toInt()
+            val s0 = samples.getOrElse(srcIdx) { 0 }.toInt()
+            val s1 = samples.getOrElse(srcIdx + 1) { s0.toShort() }.toInt()
             
             resampled[i] = (s0 + (s1 - s0) * frac).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
         }
@@ -233,7 +281,7 @@ object AudioConverter {
     /**
      * Create WAV file from PCM samples
      */
-    private fun createWavFile(samples: ShortArray): ByteArray {
+    private fun createWavFile(samples: ShortArray, sampleRate: Int): ByteArray {
         val dataSize = samples.size * 2  // 16-bit = 2 bytes per sample
         val fileSize = 44 + dataSize - 8  // RIFF chunk doesn't include "RIFF" and size fields
         
@@ -249,8 +297,8 @@ object AudioConverter {
         buffer.putInt(16)  // fmt chunk size
         buffer.putShort(1)  // audio format (PCM)
         buffer.putShort(TARGET_CHANNELS.toShort())
-        buffer.putInt(TARGET_SAMPLE_RATE)
-        buffer.putInt(TARGET_SAMPLE_RATE * TARGET_CHANNELS * TARGET_BITS_PER_SAMPLE / 8)  // byte rate
+        buffer.putInt(sampleRate)
+        buffer.putInt(sampleRate * TARGET_CHANNELS * TARGET_BITS_PER_SAMPLE / 8)  // byte rate
         buffer.putShort((TARGET_CHANNELS * TARGET_BITS_PER_SAMPLE / 8).toShort())  // block align
         buffer.putShort(TARGET_BITS_PER_SAMPLE.toShort())
         

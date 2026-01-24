@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.ParcelUuid
 import android.widget.*
+import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
 import androidx.appcompat.app.AlertDialog
@@ -29,6 +30,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import java.util.*
 import java.util.regex.Pattern
+import java.io.File
+import kotlinx.coroutines.*
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -125,10 +128,16 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var btnSelectFw: Button
     private lateinit var btnStartOta: Button
+    private lateinit var btnCheckUpdates: Button
 
     // OTA Progress UI
     private lateinit var progressOta: ProgressBar
     private lateinit var tvOtaStatus: TextView
+
+    // OTA Downloader
+    private var otaDownloader: OtaDownloader? = null
+    private var otaDownloadJob: Job? = null
+    private var currentFirmwareFile: File? = null
 
     // LED Effect Spinner
     private lateinit var spinnerLedEffect: Spinner
@@ -151,6 +160,10 @@ class MainActivity : AppCompatActivity() {
     private var currentGradientType: Int = 0
     private var currentLedSpeed: Int = 50
     private var updatingLedSettings: Boolean = false
+
+    // EQ Presets
+    private var currentPresetId: Int = 0  // 0 = Balanced
+    private var tvCurrentPreset: TextView? = null
 
     // Codec Selection Spinner
     private lateinit var spinnerCodec: Spinner
@@ -461,8 +474,17 @@ class MainActivity : AppCompatActivity() {
 
         btnSelectFw = findViewById(R.id.btnSelectFirmware)
         btnStartOta = findViewById(R.id.btnStartOta)
+        btnCheckUpdates = findViewById(R.id.btnCheckUpdates)
         progressOta = findViewById(R.id.progressOta)
         tvOtaStatus = findViewById(R.id.tvOtaStatus)
+
+        // Initialize OTA downloader
+        otaDownloader = OtaDownloader(this)
+
+        // Check for updates button
+        btnCheckUpdates.setOnClickListener {
+            checkForOtaUpdates()
+        }
 
         btnSelectFw.setOnClickListener {
             pickFirmwareLauncher.launch("*/*")
@@ -488,12 +510,19 @@ class MainActivity : AppCompatActivity() {
             bottomSheet.show(supportFragmentManager, DeviceInfoBottomSheet.TAG)
         }
         btnStartOta.setOnClickListener {
-            val uri = firmwareUri
-            if (uri == null) {
-                tvOtaStatus.visibility = View.VISIBLE
-                tvOtaStatus.text = "Select firmware first"
+            // Check if we have a downloaded firmware file first
+            val downloadedFile = currentFirmwareFile
+            if (downloadedFile != null && downloadedFile.exists()) {
+                startOtaFromDownload(downloadedFile)
             } else {
-                startOta(uri)
+                // Fallback to file picker
+                val uri = firmwareUri
+                if (uri == null) {
+                    tvOtaStatus.visibility = View.VISIBLE
+                    tvOtaStatus.text = "Select firmware first or check for updates"
+                } else {
+                    startOta(uri)
+                }
             }
         }
 
@@ -550,6 +579,9 @@ class MainActivity : AppCompatActivity() {
         ambientControlsContainer = findViewById(R.id.ambientControlsContainer)
         setupLedSettingsUI()
 
+        // EQ Presets setup
+        setupEqPresets()
+
         // Codec Selection Spinner
         spinnerCodec = findViewById(R.id.spinnerCodec)
         codecCard = findViewById(R.id.codecCard)
@@ -602,6 +634,9 @@ class MainActivity : AppCompatActivity() {
         bluetoothAdapter?.getProfileProxy(this, a2dpProfileListener, BluetoothProfile.A2DP)
 
         ensurePermissions()
+
+        // Check for auto-connect from ConnectionActivity
+        handleAutoConnect()
 
         btnScanConnect.setOnClickListener {
             if (!isConnected) startScan() else disconnectGatt()
@@ -886,6 +921,169 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun setupEqPresets() {
+        tvCurrentPreset = findViewById(R.id.tvCurrentPreset)
+        
+        // Load custom preset names from SharedPreferences
+        val prefs = getSharedPreferences("BDKAudioPrefs", Context.MODE_PRIVATE)
+        val custom1Name = prefs.getString("custom_preset_1_name", "Custom 1") ?: "Custom 1"
+        val custom2Name = prefs.getString("custom_preset_2_name", "Custom 2") ?: "Custom 2"
+        findViewById<TextView>(R.id.tvCustom1Name)?.text = custom1Name
+        findViewById<TextView>(R.id.tvCustom2Name)?.text = custom2Name
+        
+        // Preset definitions from EqPresets: id, name, bass(0-100), mid(0-100), treble(0-100)
+        findViewById<FrameLayout>(R.id.presetBalanced)?.setOnClickListener {
+            applyEqPreset(0, "Balanced", 50, 50, 50)
+        }
+        findViewById<FrameLayout>(R.id.presetDeepBass)?.setOnClickListener {
+            applyEqPreset(1, "Deep Bass", 85, 45, 40)
+        }
+        findViewById<FrameLayout>(R.id.presetClearVocals)?.setOnClickListener {
+            applyEqPreset(2, "Clear Vocals", 40, 70, 55)
+        }
+        findViewById<FrameLayout>(R.id.presetBrightClear)?.setOnClickListener {
+            applyEqPreset(3, "Bright & Clear", 45, 55, 80)
+        }
+        findViewById<FrameLayout>(R.id.presetPunchy)?.setOnClickListener {
+            applyEqPreset(4, "Punchy", 75, 40, 70)
+        }
+        findViewById<FrameLayout>(R.id.presetWarm)?.setOnClickListener {
+            applyEqPreset(5, "Warm", 65, 55, 35)
+        }
+        findViewById<FrameLayout>(R.id.presetStudio)?.setOnClickListener {
+            applyEqPreset(6, "Studio", 50, 52, 50)
+        }
+        findViewById<FrameLayout>(R.id.presetClub)?.setOnClickListener {
+            applyEqPreset(7, "Club", 80, 45, 65)
+        }
+        findViewById<FrameLayout>(R.id.presetCinema)?.setOnClickListener {
+            applyEqPreset(8, "Cinema", 70, 60, 55)
+        }
+        findViewById<FrameLayout>(R.id.presetPodcast)?.setOnClickListener {
+            applyEqPreset(9, "Podcast", 35, 80, 50)
+        }
+        findViewById<FrameLayout>(R.id.presetGaming)?.setOnClickListener {
+            applyEqPreset(10, "Gaming", 75, 55, 70)
+        }
+        findViewById<FrameLayout>(R.id.presetLateNight)?.setOnClickListener {
+            applyEqPreset(11, "Late Night", 55, 55, 40)
+        }
+        
+        // Custom preset buttons
+        findViewById<FrameLayout>(R.id.presetCustom1)?.setOnClickListener {
+            loadCustomPreset(1)
+        }
+        findViewById<FrameLayout>(R.id.presetCustom1)?.setOnLongClickListener {
+            saveCustomPreset(1)
+            true
+        }
+        findViewById<FrameLayout>(R.id.presetCustom2)?.setOnClickListener {
+            loadCustomPreset(2)
+        }
+        findViewById<FrameLayout>(R.id.presetCustom2)?.setOnLongClickListener {
+            saveCustomPreset(2)
+            true
+        }
+        
+        // More Presets toggle
+        val tvMorePresets = findViewById<TextView>(R.id.tvMorePresets)
+        val extendedPresetsContainer = findViewById<LinearLayout>(R.id.extendedPresetsContainer)
+        tvMorePresets?.setOnClickListener {
+            if (extendedPresetsContainer?.visibility == View.VISIBLE) {
+                extendedPresetsContainer.visibility = View.GONE
+                tvMorePresets.text = "More presets ▼"
+            } else {
+                extendedPresetsContainer?.visibility = View.VISIBLE
+                tvMorePresets.text = "Less presets ▲"
+            }
+        }
+    }
+    
+    private fun applyEqPreset(presetId: Int, name: String, bass: Int, mid: Int, treble: Int) {
+        currentPresetId = presetId
+        tvCurrentPreset?.text = name
+        
+        // Update the seekbars (values are 0-100, seekbars are 0-24 with 12 as center)
+        // Convert 0-100 to -12 to +12 dB range, then to seekbar 0-24
+        val bassDb = ((bass - 50) * 12 / 50).coerceIn(-12, 12)
+        val midDb = ((mid - 50) * 12 / 50).coerceIn(-12, 12)
+        val trebleDb = ((treble - 50) * 12 / 50).coerceIn(-12, 12)
+        
+        seekBass.progress = bassDb + 12
+        seekMid.progress = midDb + 12
+        seekTreble.progress = trebleDb + 12
+        
+        // Update labels
+        tvBassLabel.text = "${if (bassDb >= 0) "+" else ""}$bassDb dB"
+        tvMidLabel.text = "${if (midDb >= 0) "+" else ""}$midDb dB"
+        tvTrebleLabel.text = "${if (trebleDb >= 0) "+" else ""}$trebleDb dB"
+        
+        // Send to device
+        sendEq()
+        
+        // Show toast
+        Toast.makeText(this, "Applied: $name", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun loadCustomPreset(slotNumber: Int) {
+        val prefs = getSharedPreferences("BDKAudioPrefs", Context.MODE_PRIVATE)
+        val name = prefs.getString("custom_preset_${slotNumber}_name", null)
+        val bass = prefs.getInt("custom_preset_${slotNumber}_bass", 50)
+        val mid = prefs.getInt("custom_preset_${slotNumber}_mid", 50)
+        val treble = prefs.getInt("custom_preset_${slotNumber}_treble", 50)
+        
+        if (name != null) {
+            applyEqPreset(100 + slotNumber, name, bass, mid, treble)
+        } else {
+            Toast.makeText(this, "Custom $slotNumber is empty. Long-press to save.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun saveCustomPreset(slotNumber: Int) {
+        // Show dialog to name the preset
+        val editText = EditText(this).apply {
+            hint = "Preset name"
+            setText("My Preset $slotNumber")
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
+        }
+        
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+            .setTitle("Save Custom Preset $slotNumber")
+            .setMessage("Save current EQ settings as a custom preset?")
+            .setView(editText)
+            .setPositiveButton("Save") { _, _ ->
+                val name = editText.text.toString().ifEmpty { "Custom $slotNumber" }
+                
+                // Get current EQ values (convert seekbar 0-24 to 0-100 range)
+                val bass = ((seekBass.progress - 12) * 50 / 12 + 50).coerceIn(0, 100)
+                val mid = ((seekMid.progress - 12) * 50 / 12 + 50).coerceIn(0, 100)
+                val treble = ((seekTreble.progress - 12) * 50 / 12 + 50).coerceIn(0, 100)
+                
+                // Save to SharedPreferences
+                val prefs = getSharedPreferences("BDKAudioPrefs", Context.MODE_PRIVATE)
+                prefs.edit().apply {
+                    putString("custom_preset_${slotNumber}_name", name)
+                    putInt("custom_preset_${slotNumber}_bass", bass)
+                    putInt("custom_preset_${slotNumber}_mid", mid)
+                    putInt("custom_preset_${slotNumber}_treble", treble)
+                    apply()
+                }
+                
+                // Update the custom preset button text
+                updateCustomPresetButton(slotNumber, name)
+                
+                Toast.makeText(this, "Saved: $name", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun updateCustomPresetButton(slotNumber: Int, name: String) {
+        val textViewId = if (slotNumber == 1) R.id.tvCustom1Name else R.id.tvCustom2Name
+        findViewById<TextView>(textViewId)?.text = name
     }
 
     private fun setupCodecSpinner() {
@@ -2112,12 +2310,13 @@ class MainActivity : AppCompatActivity() {
 
                 charUuidSoundCtrl -> {
                     if (raw.isNotEmpty()) {
-                        // Check if this is a sound upload ACK (0x81, 0x82, 0x83, or 0xE0)
                         val firstByte = raw[0].toInt() and 0xFF
-                        if (firstByte >= 0x80) {
+                        // ACKs use 0xAx range (0xA1, 0xA2, 0xA3) or 0xEx range (errors)
+                        // Status uses 0x00-0x0F (unmuted) or 0x80-0x8F (muted)
+                        if ((firstByte and 0xF0) == 0xA0 || (firstByte and 0xF0) == 0xE0) {
                             handleSoundUploadResponse(raw)
                         } else {
-                            // Regular sound status update
+                            // Regular sound status update (0x00-0x0F unmuted, 0x80-0x8F muted)
                             soundStatus = firstByte
                             runOnUiThread {
                                 deviceInfoBottomSheet?.updateSoundStatus(soundStatus)
@@ -2217,12 +2416,13 @@ class MainActivity : AppCompatActivity() {
 
                 charUuidSoundCtrl -> {
                     if (raw.isNotEmpty()) {
-                        // Check if this is a sound upload ACK (0x81, 0x82, 0x83, or 0xE0)
                         val firstByte = raw[0].toInt() and 0xFF
-                        if (firstByte >= 0x80) {
+                        // ACKs use 0xAx range (0xA1, 0xA2, 0xA3) or 0xEx range (errors)
+                        // Status uses 0x00-0x0F (unmuted) or 0x80-0x8F (muted)
+                        if ((firstByte and 0xF0) == 0xA0 || (firstByte and 0xF0) == 0xE0) {
                             handleSoundUploadResponse(raw)
                         } else {
-                            // Regular sound status update
+                            // Regular sound status update (0x00-0x0F unmuted, 0x80-0x8F muted)
                             soundStatus = firstByte
                             runOnUiThread {
                                 deviceInfoBottomSheet?.updateSoundStatus(soundStatus)
@@ -2325,6 +2525,29 @@ class MainActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             gatt.readCharacteristic(ch)
+        }
+    }
+
+    /**
+     * Handle auto-connect from ConnectionActivity
+     * When user is directed here from the pairing screen, automatically connect to the device
+     */
+    @SuppressLint("MissingPermission")
+    private fun handleAutoConnect() {
+        val shouldAutoConnect = intent.getBooleanExtra("auto_connect", false)
+        val deviceAddress = intent.getStringExtra("device_address")
+        val deviceName = intent.getStringExtra("device_name")
+        
+        if (shouldAutoConnect && !deviceAddress.isNullOrEmpty()) {
+            val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)
+            if (device != null) {
+                tvStatus.text = "Connecting to ${deviceName ?: "BDK Speaker"}..."
+                btnScanConnect.text = "Connecting..."
+                // Small delay to let UI settle, then connect
+                handler.postDelayed({
+                    connectToDevice(device)
+                }, 500)
+            }
         }
     }
 
@@ -2609,6 +2832,13 @@ class MainActivity : AppCompatActivity() {
     fun uploadSoundFile(soundType: Int, data: ByteArray, onProgress: (Int) -> Unit, onComplete: (Boolean) -> Unit) {
         android.util.Log.d("Sound", "uploadSoundFile called: type=$soundType, size=${data.size}, connected=$isConnected, soundDataChar=${soundDataChar != null}, gatt=${bluetoothGatt != null}")
         
+        // Validate sound type (0-3)
+        if (soundType < 0 || soundType > 3) {
+            android.util.Log.e("Sound", "Upload failed: invalid soundType=$soundType (must be 0-3)")
+            runOnUiThread { onComplete(false) }
+            return
+        }
+        
         if (!isConnected) {
             android.util.Log.e("Sound", "Upload failed: not connected")
             runOnUiThread { onComplete(false) }
@@ -2649,7 +2879,7 @@ class MainActivity : AppCompatActivity() {
                 // START: [0x01][soundType][size(4)][reserved(4)]
                 // DATA:  [0x02][seq(2)][len(2)][payload...]
                 // END:   [0x03]
-                // Responses via soundCtrl notification: 0x81=START_OK, 0x82+seq=ACK, 0x83=DONE, 0xE0+code=ERROR
+                // Responses via soundCtrl notification: 0xA1=START_OK, 0xA2=ACK, 0xA3=DONE, 0xE0+code=ERROR
                 
                 val totalSize = data.size
                 
@@ -2664,6 +2894,8 @@ class MainActivity : AppCompatActivity() {
                     // Reserved bytes 6-9
                 }
                 
+                android.util.Log.d("Sound", "START packet built: type=$soundType, byte[1]=0x${String.format("%02X", startPkt[1])}, size=$totalSize, packet=${startPkt.take(10).joinToString { String.format("%02X", it) }}")
+                
                 soundUploadAck = null
                 android.util.Log.d("Sound", "Sending START packet...")
                 if (!writeSoundPacket(gatt, dataChar, startPkt)) {
@@ -2672,9 +2904,9 @@ class MainActivity : AppCompatActivity() {
                     return@Thread
                 }
                 
-                // Wait for START_OK (0x81)
+                // Wait for START_OK (0xA1)
                 var ack = waitForSoundAck(5000)
-                if (ack == null || ack.isEmpty() || ack[0] != 0x81.toByte()) {
+                if (ack == null || ack.isEmpty() || ack[0] != 0xA1.toByte()) {
                     android.util.Log.e("Sound", "No START_OK received: ${ack?.contentToString()}")
                     runOnUiThread { onComplete(false) }
                     return@Thread
@@ -2712,20 +2944,14 @@ class MainActivity : AppCompatActivity() {
                         return@Thread
                     }
                     
-                    // Wait for ACK (0x82 + seq)
+                    // Wait for ACK (0xA2)
                     ack = waitForSoundAck(5000)
-                    if (ack == null || ack.size < 3 || ack[0] != 0x82.toByte()) {
+                    if (ack == null || ack.isEmpty() || ack[0] != 0xA2.toByte()) {
                         android.util.Log.e("Sound", "No DATA ACK for seq=$seq: ${ack?.contentToString()}")
                         runOnUiThread { onComplete(false) }
                         return@Thread
                     }
-                    
-                    val ackSeq = (ack[1].toInt() and 0xFF) or ((ack[2].toInt() and 0xFF) shl 8)
-                    if (ackSeq != seq) {
-                        android.util.Log.e("Sound", "ACK seq mismatch: got $ackSeq, expected $seq")
-                        runOnUiThread { onComplete(false) }
-                        return@Thread
-                    }
+                    // Note: ESP32 sends just 0xA2 without seq, relying on sequential processing
                     
                     offset += chunkLen
                     seq++
@@ -2743,9 +2969,9 @@ class MainActivity : AppCompatActivity() {
                     return@Thread
                 }
                 
-                // Wait for DONE (0x83)
+                // Wait for DONE (0xA3)
                 ack = waitForSoundAck(10000)
-                if (ack == null || ack.isEmpty() || ack[0] != 0x83.toByte()) {
+                if (ack == null || ack.isEmpty() || ack[0] != 0xA3.toByte()) {
                     android.util.Log.e("Sound", "No DONE received: ${ack?.contentToString()}")
                     runOnUiThread { onComplete(false) }
                     return@Thread
@@ -2917,12 +3143,15 @@ class MainActivity : AppCompatActivity() {
     
     // Called from onCharacteristicChanged when soundCtrlChar notification received
     private fun handleSoundUploadResponse(value: ByteArray) {
-        if (value.isNotEmpty() && value[0].toInt() and 0x80 != 0) {
-            // This is an upload response (0x81, 0x82, 0x83, or 0xE0)
-            android.util.Log.d("Sound", "Upload response: ${value.contentToString()}")
-            synchronized(soundUploadLock) {
-                soundUploadAck = value
-                (soundUploadLock as Object).notifyAll()
+        if (value.isNotEmpty()) {
+            val firstByte = value[0].toInt() and 0xFF
+            // ACKs are 0xA1 (START_OK), 0xA2 (DATA_ACK), 0xA3 (DONE), or 0xEx (errors)
+            if ((firstByte and 0xF0) == 0xA0 || (firstByte and 0xF0) == 0xE0) {
+                android.util.Log.d("Sound", "Upload response: ${value.contentToString()}")
+                synchronized(soundUploadLock) {
+                    soundUploadAck = value
+                    (soundUploadLock as Object).notifyAll()
+                }
             }
         }
     }
@@ -3315,6 +3544,13 @@ class MainActivity : AppCompatActivity() {
         bluetoothGatt?.close()
         bluetoothGatt = null
 
+        // Cancel any ongoing download
+        otaDownloadJob?.cancel()
+        
+        // Clean up downloaded files
+        otaDownloader?.cleanup()
+        currentFirmwareFile?.delete()
+
         // Unregister Bluetooth state receiver
         try {
             unregisterReceiver(bluetoothStateReceiver)
@@ -3332,6 +3568,327 @@ class MainActivity : AppCompatActivity() {
         // Close A2DP profile proxy
         bluetoothAdapter?.closeProfileProxy(BluetoothProfile.A2DP, bluetoothA2dp)
         bluetoothA2dp = null
+    }
+
+    /**
+     * Check for OTA updates from Google Drive
+     */
+    private fun checkForOtaUpdates() {
+        // Check WiFi first
+        if (!NetworkHelper.isWifiConnected(this)) {
+            NetworkHelper.promptEnableWifi(this) {
+                // Retry after user interaction
+                checkForOtaUpdates()
+            }
+            return
+        }
+        
+        runOnUiThread {
+            progressOta.visibility = View.VISIBLE
+            progressOta.progress = 0
+            tvOtaStatus.visibility = View.VISIBLE
+            tvOtaStatus.text = "Checking for updates..."
+            tvOtaStatus.setTextColor(Color.parseColor("#A1A1AA"))
+            btnCheckUpdates.isEnabled = false
+        }
+        
+        otaDownloadJob = CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val result = otaDownloader?.checkForUpdates(currentFirmwareVersion)
+                
+                result?.onSuccess { firmwareInfo ->
+                    if (firmwareInfo != null) {
+                        // Update available
+                        runOnUiThread {
+                            tvOtaStatus.text = "Update available: ${firmwareInfo.version}"
+                            tvOtaStatus.setTextColor(Color.parseColor("#10B981"))
+                            btnCheckUpdates.isEnabled = true
+                            
+                            AlertDialog.Builder(this@MainActivity)
+                                .setTitle("Firmware Update Available")
+                                .setMessage("New version ${firmwareInfo.version} is available.\n\nCurrent version: $currentFirmwareVersion\n\nDownload and install?")
+                                .setPositiveButton("Download") { _, _ ->
+                                    downloadAndPrepareOta(firmwareInfo)
+                                }
+                                .setNegativeButton("Later", null)
+                                .show()
+                        }
+                    } else {
+                        // No update available
+                        runOnUiThread {
+                            tvOtaStatus.text = "You have the latest version ($currentFirmwareVersion)"
+                            tvOtaStatus.setTextColor(Color.parseColor("#10B981"))
+                            btnCheckUpdates.isEnabled = true
+                            
+                            // Hide after 3 seconds
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                progressOta.visibility = View.GONE
+                                tvOtaStatus.visibility = View.GONE
+                            }, 3000)
+                        }
+                    }
+                }?.onFailure { error ->
+                    runOnUiThread {
+                        tvOtaStatus.text = "Error checking updates: ${error.message}"
+                        tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                        btnCheckUpdates.isEnabled = true
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    tvOtaStatus.text = "Error: ${e.message}"
+                    tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                    btnCheckUpdates.isEnabled = true
+                }
+            }
+        }
+    }
+
+    /**
+     * Download firmware from Google Drive
+     */
+    private fun downloadAndPrepareOta(firmwareInfo: OtaDownloader.FirmwareInfo) {
+        runOnUiThread {
+            progressOta.visibility = View.VISIBLE
+            progressOta.progress = 0
+            tvOtaStatus.visibility = View.VISIBLE
+            tvOtaStatus.text = "Downloading firmware..."
+            tvOtaStatus.setTextColor(Color.parseColor("#A1A1AA"))
+            setControlsEnabled(false)
+        }
+        
+        otaDownloadJob = CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val result = otaDownloader?.downloadFirmware(firmwareInfo, object : OtaDownloader.DownloadProgressListener {
+                    override fun onProgress(bytesDownloaded: Long, totalBytes: Long, percentage: Int) {
+                        runOnUiThread {
+                            progressOta.progress = percentage
+                            tvOtaStatus.text = "Downloading: ${bytesDownloaded / 1024} / ${totalBytes / 1024} KB ($percentage%)"
+                        }
+                    }
+                    
+                    override fun onComplete(encryptedFile: File) {
+                        runOnUiThread {
+                            tvOtaStatus.text = "Download complete. Decrypting..."
+                        }
+                    }
+                    
+                    override fun onError(error: String) {
+                        runOnUiThread {
+                            tvOtaStatus.text = "Download error: $error"
+                            tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                            setControlsEnabled(true)
+                        }
+                    }
+                })
+                
+                result?.onSuccess { encryptedFile ->
+                    // Decrypt firmware
+                    runOnUiThread {
+                        tvOtaStatus.text = "Decrypting firmware..."
+                    }
+                    
+                    val decryptResult = otaDownloader?.decryptFirmwareFile(encryptedFile)
+                    decryptResult?.onSuccess { decryptedData ->
+                        // Save decrypted firmware to temp file
+                        val decryptedFile = File(cacheDir, "firmware_${firmwareInfo.version}.bin")
+                        decryptedFile.writeBytes(decryptedData)
+                        
+                        currentFirmwareFile = decryptedFile
+                        
+                        runOnUiThread {
+                            tvOtaStatus.text = "Ready to flash. Click 'Start OTA' to begin."
+                            tvOtaStatus.setTextColor(Color.parseColor("#10B981"))
+                            btnStartOta.isEnabled = true
+                            setControlsEnabled(true)
+                            
+                            // Clean up encrypted file
+                            encryptedFile.delete()
+                        }
+                    }?.onFailure { error ->
+                        runOnUiThread {
+                            tvOtaStatus.text = "Decryption error: ${error.message}"
+                            tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                            setControlsEnabled(true)
+                            encryptedFile.delete()
+                        }
+                    }
+                }?.onFailure { error ->
+                    runOnUiThread {
+                        tvOtaStatus.text = "Download failed: ${error.message}"
+                        tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                        setControlsEnabled(true)
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    tvOtaStatus.text = "Error: ${e.message}"
+                    tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                    setControlsEnabled(true)
+                }
+            }
+        }
+    }
+
+    /**
+     * Start OTA from downloaded decrypted firmware file
+     */
+    @SuppressLint("MissingPermission")
+    private fun startOtaFromDownload(firmwareFile: File) {
+        val gatt = bluetoothGatt
+        val ctrlChar = otaCtrlChar
+        val dataChar = otaDataChar
+
+        if (!isConnected || gatt == null || ctrlChar == null || dataChar == null) {
+            runOnUiThread {
+                tvOtaStatus.visibility = View.VISIBLE
+                tvOtaStatus.text = "Not connected"
+                tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+            }
+            return
+        }
+
+        if (isOtaInProgress) {
+            runOnUiThread {
+                tvOtaStatus.text = "OTA already in progress"
+            }
+            return
+        }
+
+        val gattNN = gatt
+        val otaCtrlNN = ctrlChar
+        val otaDataNN = dataChar
+
+        espOtaBytes = 0
+        currentFwSize = 0
+        otaCancelled = false
+        isOtaInProgress = true
+
+        runOnUiThread {
+            progressOta.visibility = View.VISIBLE
+            progressOta.progress = 0
+            tvOtaStatus.visibility = View.VISIBLE
+            tvOtaStatus.text = "Preparing OTA..."
+            tvOtaStatus.setTextColor(Color.parseColor("#A1A1AA"))
+            setControlsEnabled(false)
+        }
+
+        Thread {
+            try {
+                val firmwareData = firmwareFile.readBytes()
+                val fileSize = firmwareData.size.toLong()
+                currentFwSize = fileSize
+
+                runOnUiThread {
+                    tvOtaStatus.text = "Starting OTA (${fileSize / 1024} KB)..."
+                }
+
+                // Send BEGIN command
+                val begin = "BEGIN:$fileSize".toByteArray(Charsets.UTF_8)
+                writeCharSimple(gattNN, otaCtrlNN, begin)
+                Thread.sleep(300)
+
+                if (otaCancelled || !isConnected) {
+                    throw Exception("OTA cancelled - disconnected")
+                }
+
+                // Stream firmware data
+                val maxPayload = (currentMtu - 3 - 2).coerceIn(20, 510)
+                var offset = 0
+                var lastUiUpdate = 0L
+                val ackEveryN = 8
+                val delayMs = 2L
+                var chunkCount = 0
+                
+                while (offset < firmwareData.size) {
+                    if (otaCancelled || !isConnected) {
+                        throw Exception("OTA cancelled - disconnected")
+                    }
+
+                    val remaining = firmwareData.size - offset
+                    val chunkSize = minOf(remaining, maxPayload)
+                    val chunk = firmwareData.copyOfRange(offset, offset + chunkSize)
+                    chunkCount++
+                    
+                    val useAck = (chunkCount % ackEveryN == 0)
+                    
+                    var writeSuccess = false
+                    var retryCount = 0
+                    val maxWriteRetries = 10
+                    while (!writeSuccess && retryCount < maxWriteRetries) {
+                        writeSuccess = if (useAck) {
+                            writeOtaDataWithAck(gattNN, otaDataNN, chunk)
+                        } else {
+                            writeOtaDataNoResponse(gattNN, otaDataNN, chunk)
+                        }
+                        if (!writeSuccess) {
+                            retryCount++
+                            val waitTime = if (retryCount < 3) 10L else 30L
+                            Thread.sleep(waitTime)
+                        }
+                    }
+                    
+                    if (!writeSuccess) {
+                        throw Exception("OTA write failed after $maxWriteRetries retries")
+                    }
+                    
+                    if (!useAck) {
+                        Thread.sleep(delayMs)
+                    }
+
+                    offset += chunkSize
+
+                    // UI update every ~8KB
+                    if (offset - lastUiUpdate >= 8192 || offset == firmwareData.size) {
+                        lastUiUpdate = offset.toLong()
+                        val percent = ((offset * 100) / fileSize).toInt().coerceIn(0, 100)
+                        runOnUiThread {
+                            progressOta.progress = percent
+                            tvOtaStatus.text = "Sending: ${offset / 1024} / ${fileSize / 1024} KB ($percent%)"
+                        }
+                    }
+                }
+                
+                // Flush final packets
+                val flushChunk = ByteArray(1) { 0 }
+                writeOtaDataWithAck(gattNN, otaDataNN, flushChunk)
+                
+                // Wait for ESP32 to process
+                Thread.sleep(500)
+
+                // Send END command
+                val end = "END".toByteArray(Charsets.UTF_8)
+                writeCharSimple(gattNN, otaCtrlNN, end)
+
+                runOnUiThread {
+                    progressOta.progress = 100
+                    tvOtaStatus.text = "OTA complete! Device will reboot..."
+                    tvOtaStatus.setTextColor(Color.parseColor("#10B981"))
+                    
+                    // Clean up firmware file
+                    firmwareFile.delete()
+                    currentFirmwareFile = null
+                    otaDownloader?.cleanup()
+                    
+                    // Re-enable controls after delay
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        isOtaInProgress = false
+                        setControlsEnabled(true)
+                    }, 3000)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    tvOtaStatus.text = "OTA failed: ${e.message}"
+                    tvOtaStatus.setTextColor(Color.parseColor("#EF4444"))
+                    isOtaInProgress = false
+                    setControlsEnabled(true)
+                    
+                    // Clean up on error
+                    firmwareFile.delete()
+                    currentFirmwareFile = null
+                }
+            }
+        }.start()
     }
 }
 

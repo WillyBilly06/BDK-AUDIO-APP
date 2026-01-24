@@ -1,0 +1,821 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bdk_background_gradient"
+    android:fitsSystemWindows="true">
+
+    <!-- Main Content -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/rootScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:id="@+id/rootLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- ====== DEVICE HEADER CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bdk_card_glass"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Device Icon -->
+                    <ImageView
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:src="@drawable/bdk_logo_icon"
+                        android:layout_marginEnd="16dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvDeviceName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BDK Speaker"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/bdk_text_primary" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="4dp">
+
+                            <View
+                                android:id="@+id/statusDot"
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bdk_status_dot"
+                                android:layout_marginEnd="6dp" />
+
+                            <TextView
+                                android:id="@+id/tvStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Connected"
+                                android:textSize="14sp"
+                                android:textColor="@color/bdk_status_connected" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Settings Button -->
+                    <ImageButton
+                        android:id="@+id/btnSettings"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:src="@drawable/bdk_ic_settings"
+                        android:background="@drawable/bdk_btn_secondary"
+                        android:padding="10dp"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="Settings" />
+                </LinearLayout>
+
+                <!-- Audio Levels Visualizer -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ProgressBar
+                            android:id="@+id/bar30"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:max="120"
+                            android:progressDrawable="@drawable/bdk_meter_bass" />
+                        <TextView
+                            android:id="@+id/tvVal30"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="30Hz"
+                            android:textSize="10sp"
+                            android:textColor="@color/bdk_meter_bass"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ProgressBar
+                            android:id="@+id/bar60"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:max="120"
+                            android:progressDrawable="@drawable/bdk_meter_mid" />
+                        <TextView
+                            android:id="@+id/tvVal60"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="60Hz"
+                            android:textSize="10sp"
+                            android:textColor="@color/bdk_meter_mid"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ProgressBar
+                            android:id="@+id/bar100"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:max="120"
+                            android:progressDrawable="@drawable/bdk_meter_treble" />
+                        <TextView
+                            android:id="@+id/tvVal100"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100Hz"
+                            android:textSize="10sp"
+                            android:textColor="@color/bdk_meter_treble"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ====== EQ PRESETS CARD ====== -->
+            <include 
+                android:id="@+id/cardEqPresets"
+                layout="@layout/card_eq_presets"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+
+            <!-- ====== EQUALIZER CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bdk_card_glass"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="MANUAL EQ"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="16dp" />
+
+                <!-- Bass -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="56dp"
+                        android:layout_height="wrap_content"
+                        android:text="Bass"
+                        android:textSize="14sp"
+                        android:textColor="@color/bdk_text_primary" />
+
+                    <SeekBar
+                        android:id="@+id/seekBass"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:max="24"
+                        android:progress="12"
+                        android:progressTint="@color/bdk_meter_bass"
+                        android:thumbTint="@color/bdk_meter_bass" />
+
+                    <TextView
+                        android:id="@+id/tvBassLabel"
+                        android:layout_width="48dp"
+                        android:layout_height="wrap_content"
+                        android:text="0 dB"
+                        android:textColor="@color/bdk_meter_bass"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Mid -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="56dp"
+                        android:layout_height="wrap_content"
+                        android:text="Mid"
+                        android:textSize="14sp"
+                        android:textColor="@color/bdk_text_primary" />
+
+                    <SeekBar
+                        android:id="@+id/seekMid"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:max="24"
+                        android:progress="12"
+                        android:progressTint="@color/bdk_meter_mid"
+                        android:thumbTint="@color/bdk_meter_mid" />
+
+                    <TextView
+                        android:id="@+id/tvMidLabel"
+                        android:layout_width="48dp"
+                        android:layout_height="wrap_content"
+                        android:text="0 dB"
+                        android:textColor="@color/bdk_meter_mid"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Treble -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="56dp"
+                        android:layout_height="wrap_content"
+                        android:text="Treble"
+                        android:textSize="14sp"
+                        android:textColor="@color/bdk_text_primary" />
+
+                    <SeekBar
+                        android:id="@+id/seekTreble"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:max="24"
+                        android:progress="12"
+                        android:progressTint="@color/bdk_meter_treble"
+                        android:thumbTint="@color/bdk_meter_treble" />
+
+                    <TextView
+                        android:id="@+id/tvTrebleLabel"
+                        android:layout_width="48dp"
+                        android:layout_height="wrap_content"
+                        android:text="0 dB"
+                        android:textColor="@color/bdk_meter_treble"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ====== DSP CONTROLS CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bdk_card_glass"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="DSP CONTROLS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="12dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchBassBoost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bass Boost"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textSize="15sp"
+                    android:paddingVertical="8dp"
+                    app:trackTint="@color/bdk_switch_track_on" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchChannelFlip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Channel Flip"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textSize="15sp"
+                    android:paddingVertical="8dp"
+                    app:trackTint="@color/bdk_switch_track_on" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchBypass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bypass DSP"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textSize="15sp"
+                    android:paddingVertical="8dp"
+                    app:trackTint="@color/bdk_switch_track_on" />
+            </LinearLayout>
+
+            <!-- ====== LED EFFECTS CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bdk_card_glass"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LED EFFECTS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="12dp" />
+
+                <Spinner
+                    android:id="@+id/spinnerLedEffect"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:padding="12dp"
+                    android:popupBackground="@color/bdk_background_elevated" />
+            </LinearLayout>
+
+            <!-- ====== LED SETTINGS CARD ====== -->
+            <LinearLayout
+                android:id="@+id/ledSettingsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bdk_card_glass"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LED SETTINGS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="12dp" />
+
+                <!-- Brightness -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:text="Brightness"
+                        android:textSize="14sp"
+                        android:textColor="@color/bdk_text_primary" />
+
+                    <SeekBar
+                        android:id="@+id/seekLedBrightness"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:max="255"
+                        android:progress="50"
+                        android:progressTint="@color/bdk_accent_primary"
+                        android:thumbTint="@color/bdk_accent_primary" />
+
+                    <TextView
+                        android:id="@+id/tvBrightnessValue"
+                        android:layout_width="48dp"
+                        android:layout_height="wrap_content"
+                        android:text="50"
+                        android:textColor="@color/bdk_accent_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Ambient Controls Container -->
+                <LinearLayout
+                    android:id="@+id/ambientControlsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AMBIENT COLORS"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/bdk_text_disabled"
+                        android:letterSpacing="0.1"
+                        android:paddingBottom="8dp" />
+
+                    <!-- Color 1 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="Color 1"
+                            android:textSize="14sp"
+                            android:textColor="@color/bdk_text_primary" />
+
+                        <View
+                            android:id="@+id/viewColor1"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/color_preview_bg" />
+                    </LinearLayout>
+
+                    <!-- Color 2 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="Color 2"
+                            android:textSize="14sp"
+                            android:textColor="@color/bdk_text_primary" />
+
+                        <View
+                            android:id="@+id/viewColor2"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/color_preview_bg" />
+                    </LinearLayout>
+
+                    <!-- Gradient Type -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="Gradient"
+                            android:textSize="14sp"
+                            android:textColor="@color/bdk_text_primary" />
+
+                        <Spinner
+                            android:id="@+id/spinnerGradient"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bdk_btn_secondary"
+                            android:padding="8dp"
+                            android:popupBackground="@color/bdk_background_elevated" />
+                    </LinearLayout>
+
+                    <!-- Speed -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="Speed"
+                            android:textSize="14sp"
+                            android:textColor="@color/bdk_text_primary" />
+
+                        <SeekBar
+                            android:id="@+id/seekLedSpeed"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:max="255"
+                            android:progress="50"
+                            android:progressTint="@color/bdk_accent_secondary"
+                            android:thumbTint="@color/bdk_accent_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvSpeedValue"
+                            android:layout_width="48dp"
+                            android:layout_height="wrap_content"
+                            android:text="50"
+                            android:textColor="@color/bdk_accent_secondary"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:gravity="end" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ====== BLUETOOTH CODEC CARD ====== -->
+            <LinearLayout
+                android:id="@+id/codecCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bdk_card_glass"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="BLUETOOTH CODEC"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Connect speaker via Bluetooth first"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_disabled"
+                    android:paddingBottom="12dp" />
+
+                <Spinner
+                    android:id="@+id/spinnerCodec"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:padding="12dp"
+                    android:popupBackground="@color/bdk_background_elevated" />
+
+                <Button
+                    android:id="@+id/btnAssociateDevice"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="8dp"
+                    android:text="Associate Device (for codec control)"
+                    android:textSize="11sp"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- ====== DEVICE SETTINGS CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bdk_card_glass"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="DEVICE NAME"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="12dp" />
+
+                <EditText
+                    android:id="@+id/etDeviceName"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textColorHint="@color/bdk_text_disabled"
+                    android:hint="BDK SPEAKER"
+                    android:imeOptions="actionDone"
+                    android:textSize="15sp"
+                    android:paddingHorizontal="16dp"
+                    android:inputType="text" />
+
+                <Button
+                    android:id="@+id/btnApplyName"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bdk_btn_primary"
+                    android:text="Apply Name"
+                    android:textColor="@color/bdk_text_on_accent"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+
+            <!-- ====== FIRMWARE UPDATE CARD ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bdk_card_glass"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="FIRMWARE UPDATE"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.15"
+                    android:paddingBottom="16dp" />
+
+                <ProgressBar
+                    android:id="@+id/progressOta"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="@color/bdk_accent_primary"
+                    android:progressBackgroundTint="@color/bdk_background_elevated"
+                    android:visibility="gone"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:id="@+id/tvOtaStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="@color/bdk_text_secondary"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    android:paddingBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnCheckUpdates"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bdk_btn_primary"
+                    android:text="Check for Updates"
+                    android:textColor="@color/bdk_text_on_accent"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnSelectFirmware"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bdk_btn_secondary"
+                        android:text="Select File"
+                        android:textColor="@color/bdk_text_primary"
+                        android:textAllCaps="false"
+                        android:textSize="14sp" />
+
+                    <Space android:layout_width="12dp" android:layout_height="wrap_content" />
+
+                    <Button
+                        android:id="@+id/btnStartOta"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bdk_btn_outline"
+                        android:text="Flash"
+                        android:textColor="@color/bdk_accent_primary"
+                        android:textAllCaps="false"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ====== INFO BUTTONS ====== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp">
+
+                <Button
+                    android:id="@+id/btnAppInfo"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:text="App Info"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="14sp" />
+
+                <Space android:layout_width="12dp" android:layout_height="wrap_content" />
+
+                <Button
+                    android:id="@+id/btnDeviceInfo"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:text="Device Info"
+                    android:textColor="@color/bdk_text_primary"
+                    android:textAllCaps="false"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Hidden legacy views for compatibility -->
+            <TextView
+                android:id="@+id/tvLevels"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnScanConnect"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnOtherDevice"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/deviceListContainer"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:orientation="vertical">
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/deviceRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

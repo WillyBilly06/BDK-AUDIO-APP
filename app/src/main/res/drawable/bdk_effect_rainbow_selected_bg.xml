@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rainbow Wave effect preview - SELECTED state -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer glow -->
+    <item android:left="-2dp" android:right="-2dp" android:top="-2dp" android:bottom="-2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#40FF0000"
+                android:centerColor="#4000FF00"
+                android:endColor="#400000FF" />
+        </shape>
+    </item>
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#1A1A1A" />
+        </shape>
+    </item>
+    <!-- Rainbow gradient overlay - brighter -->
+    <item android:top="15dp" android:bottom="15dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#60FF0000"
+                android:centerColor="#6000FF00"
+                android:endColor="#600000FF" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <!-- Additional color layer - brighter -->
+    <item android:top="25dp" android:bottom="25dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#50FFFF00"
+                android:centerColor="#5000FFFF"
+                android:endColor="#50FF00FF" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <!-- Accent border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="2dp" android:color="@color/bdk_accent_primary" />
+        </shape>
+    </item>
+</layer-list>

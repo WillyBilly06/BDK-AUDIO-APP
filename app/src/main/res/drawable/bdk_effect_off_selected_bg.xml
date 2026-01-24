@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Off effect - SELECTED state -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#151515" />
+        </shape>
+    </item>
+    <!-- Subtle dark gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60dp"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:startColor="#30444444"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- Accent border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="2dp" android:color="@color/bdk_accent_primary" />
+        </shape>
+    </item>
+</layer-list>

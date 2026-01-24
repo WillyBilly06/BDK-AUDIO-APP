@@ -10,11 +10,31 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): android.app.Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState)
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as com.google.android.material.bottomsheet.BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheet?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            
+            // Make it easier to close - set half expanded ratio lower so small swipe closes it
+            if (bottomSheet != null) {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
+                behavior.isFitToContents = true
+                behavior.skipCollapsed = true
+                // Enable dismissing with a shorter swipe
+                behavior.isHideable = true
+            }
+        }
+        return dialog
+    }
 
     private var tvDeviceName: TextView? = null
     private var tvFirmwareVersion: TextView? = null
@@ -55,8 +75,19 @@ class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
             ActivityResultContracts.GetContent()
         ) { uri ->
             if (uri != null && pendingSoundType >= 0) {
-                val activity = activity as? MainActivity ?: return@registerForActivityResult
+                val mainActivity = activity as? MainActivity
+                val redesignActivity = activity as? MainActivityRedesign
+                val hasStaticCallback = SettingsActivity.onSoundUpload != null
+                
+                if (mainActivity == null && redesignActivity == null && !hasStaticCallback) {
+                    Toast.makeText(context, "Sound upload not available", Toast.LENGTH_SHORT).show()
+                    return@registerForActivityResult
+                }
                 val ctx = context ?: return@registerForActivityResult
+                
+                // IMPORTANT: Capture the sound type NOW before the thread starts
+                val soundTypeToUpload = pendingSoundType
+                android.util.Log.d("Sound", "File selected for sound type: $soundTypeToUpload")
                 
                 progressUpload?.visibility = View.VISIBLE
                 progressUpload?.progress = 0
@@ -70,7 +101,7 @@ class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
                         val result = AudioConverter.convertToWav(ctx, uri)
                         
                         if (!result.success || result.wavData == null) {
-                            activity.runOnUiThread {
+                            (activity as? AppCompatActivity)?.runOnUiThread {
                                 progressUpload?.visibility = View.GONE
                                 progressUpload?.isIndeterminate = false
                                 setUploadButtonsEnabled(true)
@@ -82,37 +113,37 @@ class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
                         val wavData = result.wavData
                         android.util.Log.d("Sound", "Converted to WAV: ${wavData.size} bytes (from ${result.originalFormat})")
                         
-                        if (wavData.size > 200 * 1024) {
-                            activity.runOnUiThread {
-                                progressUpload?.visibility = View.GONE
-                                progressUpload?.isIndeterminate = false
-                                setUploadButtonsEnabled(true)
-                                Toast.makeText(ctx, "File too large after conversion (${wavData.size / 1024}KB, max 200KB)", Toast.LENGTH_SHORT).show()
-                            }
-                            return@Thread
-                        }
-                        
-                        activity.runOnUiThread {
+                        (activity as? AppCompatActivity)?.runOnUiThread {
                             progressUpload?.isIndeterminate = false
                             progressUpload?.progress = 0
                         }
                         
-                        activity.uploadSoundFile(pendingSoundType, wavData,
-                            onProgress = { progress ->
-                                progressUpload?.progress = progress
-                            },
-                            onComplete = { success ->
-                                progressUpload?.visibility = View.GONE
-                                setUploadButtonsEnabled(true)
-                                if (success) {
-                                    Toast.makeText(ctx, "Upload complete (${wavData.size / 1024}KB WAV)", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(ctx, "Upload failed", Toast.LENGTH_SHORT).show()
-                                }
+                        android.util.Log.d("Sound", "Calling uploadSoundFile with soundTypeToUpload=$soundTypeToUpload")
+                        
+                        val onProgress: (Int) -> Unit = { progress: Int ->
+                            progressUpload?.progress = progress
+                        }
+                        val onComplete: (Boolean) -> Unit = { success: Boolean ->
+                            progressUpload?.visibility = View.GONE
+                            setUploadButtonsEnabled(true)
+                            if (success) {
+                                Toast.makeText(ctx, "Upload complete (${wavData.size / 1024}KB WAV)", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(ctx, "Upload failed", Toast.LENGTH_SHORT).show()
                             }
-                        )
+                        }
+                        
+                        // Try direct activity call first, then static callback
+                        if (mainActivity != null) {
+                            mainActivity.uploadSoundFile(soundTypeToUpload, wavData, onProgress, onComplete)
+                        } else if (redesignActivity != null) {
+                            redesignActivity.uploadSoundFile(soundTypeToUpload, wavData, onProgress, onComplete)
+                        } else {
+                            SettingsActivity.onSoundUpload?.invoke(soundTypeToUpload, wavData, onProgress, onComplete)
+                        }
+                        
                     } catch (e: Exception) {
-                        activity.runOnUiThread {
+                        (activity as? AppCompatActivity)?.runOnUiThread {
                             progressUpload?.visibility = View.GONE
                             progressUpload?.isIndeterminate = false
                             setUploadButtonsEnabled(true)
@@ -128,7 +159,10 @@ class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
     override fun onResume() {
         super.onResume()
         // Sync with latest sound status from MainActivity when becoming visible
-        (activity as? MainActivity)?.getSoundStatus()?.let { status ->
+        // Get fresh sound status from activity
+        val soundStatus = (activity as? MainActivity)?.getSoundStatus()
+            ?: (activity as? MainActivityRedesign)?.getSoundStatus()
+        soundStatus?.let { status ->
             updateSoundStatus(status)
         }
     }
@@ -174,55 +208,90 @@ class DeviceInfoBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun setupSoundControls() {
-        val activity = activity as? MainActivity
+        val mainActivity = activity as? MainActivity
+        val redesignActivity = activity as? MainActivityRedesign
 
         switchMuteSound?.setOnCheckedChangeListener { _, isChecked ->
             if (!updatingFromDevice) {
-                activity?.sendSoundMute(isChecked)
+                // Try direct activity call first, then static callback
+                mainActivity?.sendSoundMute(isChecked)
+                redesignActivity?.sendSoundMute(isChecked)
+                // Fallback to static callback (for when launched from SettingsActivity)
+                if (mainActivity == null && redesignActivity == null) {
+                    SettingsActivity.onSoundMuteChanged?.invoke(isChecked)
+                }
             }
         }
 
         btnUploadStartup?.setOnClickListener {
             pendingSoundType = 0
+            android.util.Log.d("Sound", "Startup button clicked, pendingSoundType = $pendingSoundType")
             pickSoundLauncher?.launch("audio/*")
         }
 
         btnUploadPairing?.setOnClickListener {
             pendingSoundType = 1
+            android.util.Log.d("Sound", "Pairing button clicked, pendingSoundType = $pendingSoundType")
             pickSoundLauncher?.launch("audio/*")
         }
 
         btnUploadConnected?.setOnClickListener {
             pendingSoundType = 2
+            android.util.Log.d("Sound", "Connected button clicked, pendingSoundType = $pendingSoundType")
             pickSoundLauncher?.launch("audio/*")
         }
 
         btnUploadMaxVol?.setOnClickListener {
             pendingSoundType = 3
+            android.util.Log.d("Sound", "MaxVol button clicked, pendingSoundType = $pendingSoundType")
             pickSoundLauncher?.launch("audio/*")
         }
 
         // Long press to delete
         btnUploadStartup?.setOnLongClickListener {
-            activity?.sendDeleteSound(0)
+            val mainActivity = activity as? MainActivity
+            val redesignActivity = activity as? MainActivityRedesign
+            mainActivity?.sendDeleteSound(0)
+            redesignActivity?.sendDeleteSound(0)
+            if (mainActivity == null && redesignActivity == null) {
+                SettingsActivity.onSoundDelete?.invoke(0)
+            }
             Toast.makeText(context, "Deleting startup sound...", Toast.LENGTH_SHORT).show()
             true
         }
 
         btnUploadPairing?.setOnLongClickListener {
-            activity?.sendDeleteSound(1)
+            val mainActivity = activity as? MainActivity
+            val redesignActivity = activity as? MainActivityRedesign
+            mainActivity?.sendDeleteSound(1)
+            redesignActivity?.sendDeleteSound(1)
+            if (mainActivity == null && redesignActivity == null) {
+                SettingsActivity.onSoundDelete?.invoke(1)
+            }
             Toast.makeText(context, "Deleting pairing sound...", Toast.LENGTH_SHORT).show()
             true
         }
 
         btnUploadConnected?.setOnLongClickListener {
-            activity?.sendDeleteSound(2)
+            val mainActivity = activity as? MainActivity
+            val redesignActivity = activity as? MainActivityRedesign
+            mainActivity?.sendDeleteSound(2)
+            redesignActivity?.sendDeleteSound(2)
+            if (mainActivity == null && redesignActivity == null) {
+                SettingsActivity.onSoundDelete?.invoke(2)
+            }
             Toast.makeText(context, "Deleting connected sound...", Toast.LENGTH_SHORT).show()
             true
         }
 
         btnUploadMaxVol?.setOnLongClickListener {
-            activity?.sendDeleteSound(3)
+            val mainActivity = activity as? MainActivity
+            val redesignActivity = activity as? MainActivityRedesign
+            mainActivity?.sendDeleteSound(3)
+            redesignActivity?.sendDeleteSound(3)
+            if (mainActivity == null && redesignActivity == null) {
+                SettingsActivity.onSoundDelete?.invoke(3)
+            }
             Toast.makeText(context, "Deleting max volume sound...", Toast.LENGTH_SHORT).show()
             true
         }

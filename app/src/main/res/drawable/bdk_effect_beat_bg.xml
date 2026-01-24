@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Beat Pulse effect preview - pulsing radial gradient -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#1A1A1A" />
+        </shape>
+    </item>
+    <!-- Radial pulse effect -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60dp"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:startColor="#50FF0066"
+                android:endColor="#00FF0066" />
+        </shape>
+    </item>
+    <!-- Subtle border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="1dp" android:color="#333333" />
+        </shape>
+    </item>
+</layer-list>

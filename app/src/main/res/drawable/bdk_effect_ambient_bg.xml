@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ambient effect preview - soft gradient glow -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#1A1A1A" />
+        </shape>
+    </item>
+    <!-- Soft ambient glow -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:startColor="#40FFAA00"
+                android:endColor="#10FF6600" />
+        </shape>
+    </item>
+    <!-- Secondary glow -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="50dp"
+                android:centerX="0.3"
+                android:centerY="0.7"
+                android:startColor="#3000AAFF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- Subtle border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="1dp" android:color="#333333" />
+        </shape>
+    </item>
+</layer-list>

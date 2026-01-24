@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================ -->
+    <!-- BDK AUDIO - Signature Brand Colors          -->
+    <!-- Premium audio experience, professional feel -->
+    <!-- ============================================ -->
+    
+    <!-- Core Background - Deep space black with subtle warmth -->
+    <color name="bdk_background_primary">#FF0A0A0F</color>
+    <color name="bdk_background_secondary">#FF12121A</color>
+    <color name="bdk_background_elevated">#FF1A1A25</color>
+    <color name="bdk_background_card">#FF1E1E2A</color>
+    <color name="bdk_background_overlay">#E6000000</color>
+    
+    <!-- Signature Accent - Electric Cyan with Orange complement -->
+    <color name="bdk_accent_primary">#FF00D4FF</color>
+    <color name="bdk_accent_primary_light">#FF4DE8FF</color>
+    <color name="bdk_accent_primary_dark">#FF00A3C7</color>
+    <color name="bdk_accent_secondary">#FFFF6B35</color>
+    <color name="bdk_accent_secondary_light">#FFFF8F5E</color>
+    
+    <!-- Gradient Colors for premium feel -->
+    <color name="bdk_gradient_start">#FF00D4FF</color>
+    <color name="bdk_gradient_mid">#FF00A3C7</color>
+    <color name="bdk_gradient_end">#FF0066CC</color>
+    
+    <!-- Alternative Gradient (warm) -->
+    <color name="bdk_gradient_warm_start">#FFFF6B35</color>
+    <color name="bdk_gradient_warm_end">#FFFF3D00</color>
+    
+    <!-- Text Colors -->
+    <color name="bdk_text_primary">#FFFFFFFF</color>
+    <color name="bdk_text_secondary">#FFB8B8C8</color>
+    <color name="bdk_text_tertiary">#FF6B6B7B</color>
+    <color name="bdk_text_disabled">#FF4A4A5A</color>
+    <color name="bdk_text_on_accent">#FF0A0A0F</color>
+    
+    <!-- Status Colors -->
+    <color name="bdk_status_connected">#FF00E676</color>
+    <color name="bdk_status_connecting">#FF00D4FF</color>
+    <color name="bdk_status_disconnected">#FF6B6B7B</color>
+    <color name="bdk_status_error">#FFFF5252</color>
+    <color name="bdk_status_warning">#FFFFAB40</color>
+    
+    <!-- Audio Meter Colors - Frequency based -->
+    <color name="bdk_meter_bass">#FFFF6B35</color>
+    <color name="bdk_meter_mid">#FF00D4FF</color>
+    <color name="bdk_meter_treble">#FF00E676</color>
+    <color name="bdk_meter_background">#FF2A2A35</color>
+    
+    <!-- EQ Preset Colors -->
+    <color name="bdk_eq_balanced">#FF00D4FF</color>
+    <color name="bdk_eq_bass">#FFFF6B35</color>
+    <color name="bdk_eq_vocals">#FF9C27B0</color>
+    <color name="bdk_eq_bright">#FF00E676</color>
+    <color name="bdk_eq_punchy">#FFFF5252</color>
+    <color name="bdk_eq_warm">#FFFFAB40</color>
+    
+    <!-- Button Colors -->
+    <color name="bdk_button_primary">#FF00D4FF</color>
+    <color name="bdk_button_primary_pressed">#FF00A3C7</color>
+    <color name="bdk_button_secondary">#FF2A2A35</color>
+    <color name="bdk_button_secondary_pressed">#FF3A3A45</color>
+    <color name="bdk_button_outline">#FF00D4FF</color>
+    
+    <!-- Card Glass Effect -->
+    <color name="bdk_glass_background">#1A00D4FF</color>
+    <color name="bdk_glass_border">#3300D4FF</color>
+    
+    <!-- Divider and borders -->
+    <color name="bdk_divider">#FF2A2A35</color>
+    <color name="bdk_border">#FF3A3A45</color>
+    
+    <!-- Ripple -->
+    <color name="bdk_ripple">#3300D4FF</color>
+    
+    <!-- Switch/Toggle -->
+    <color name="bdk_switch_track_on">#FF00D4FF</color>
+    <color name="bdk_switch_track_off">#FF3A3A45</color>
+    <color name="bdk_switch_thumb">#FFFFFFFF</color>
+    
+    <!-- Success/Warning/Error -->
+    <color name="bdk_success">#FF00E676</color>
+    <color name="bdk_warning">#FFFFAB40</color>
+    <color name="bdk_error">#FFFF5252</color>
+</resources>

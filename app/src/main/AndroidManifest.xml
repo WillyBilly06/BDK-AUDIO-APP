@@ -12,16 +12,40 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MySpeakerControl">
+        
+        <!-- Connection/Pairing Screen - Now the launcher -->
         <activity
-            android:name=".MainActivity"
+            android:name=".ConnectionActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustPan|stateHidden">
+            android:theme="@style/Theme.MySpeakerControl.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- Main Control Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            android:parentActivityName=".ConnectionActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ConnectionActivity" />
+        </activity>
+        
+        <!-- New Redesigned Main Activity -->
+        <activity
+            android:name=".MainActivityRedesign"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            android:parentActivityName=".ConnectionActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ConnectionActivity" />
+        </activity>
+        
         <activity
             android:name=".AppInfoActivity"
             android:label="App info"
@@ -32,6 +56,24 @@
                 android:value=".MainActivity" />
         </activity>
         <activity android:name=".DeviceInfoActivity" />
+        
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Settings"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        
+        <activity
+            android:name=".OtaActivity"
+            android:label="Firmware Update"
+            android:parentActivityName=".MainActivityRedesign">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivityRedesign" />
+        </activity>
     </application>
     <uses-permission
         android:name="android.permission.BLUETOOTH"
@@ -48,6 +90,11 @@
     
     <!-- For modifying audio settings -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- For OTA firmware download -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <!-- For older Android (API < 31) to allow BLE scanning -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"

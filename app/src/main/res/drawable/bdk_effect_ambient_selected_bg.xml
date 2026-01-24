@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ambient effect preview - SELECTED state -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer glow -->
+    <item android:left="-2dp" android:right="-2dp" android:top="-2dp" android:bottom="-2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="100dp"
+                android:startColor="#50FFAA00"
+                android:endColor="#00FFAA00"
+                android:centerX="0.5"
+                android:centerY="0.5" />
+        </shape>
+    </item>
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#1A1A1A" />
+        </shape>
+    </item>
+    <!-- Soft ambient glow - brighter -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:startColor="#60FFAA00"
+                android:endColor="#20FF6600" />
+        </shape>
+    </item>
+    <!-- Secondary glow - brighter -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="50dp"
+                android:centerX="0.3"
+                android:centerY="0.7"
+                android:startColor="#5000AAFF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- Accent border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="2dp" android:color="@color/bdk_accent_primary" />
+        </shape>
+    </item>
+</layer-list>

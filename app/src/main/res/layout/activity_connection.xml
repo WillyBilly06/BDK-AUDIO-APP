@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bdk_background_gradient">
+
+    <!-- Ambient animated rings - centered, radial gradient glow -->
+    <View
+        android:id="@+id/pulseCircle1"
+        android:layout_width="350dp"
+        android:layout_height="350dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bdk_ambient_ring_glow"
+        android:alpha="0.6" />
+
+    <View
+        android:id="@+id/pulseCircle2"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bdk_ambient_ring_glow"
+        android:alpha="0.7" />
+
+    <View
+        android:id="@+id/pulseCircle3"
+        android:layout_width="170dp"
+        android:layout_height="170dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bdk_ambient_ring_glow"
+        android:alpha="0.85" />
+
+    <!-- BDK Logo in center of rings -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BDK"
+            android:textSize="56sp"
+            android:textStyle="bold"
+            android:textColor="@color/bdk_text_primary"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AUDIO"
+            android:textSize="22sp"
+            android:textColor="@color/bdk_accent_primary"
+            android:letterSpacing="0.15" />
+    </LinearLayout>
+
+    <!-- Status Area - at bottom -->
+    <LinearLayout
+        android:id="@+id/statusContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:layout_marginBottom="48dp">
+
+        <!-- Hidden Bluetooth Icon (referenced in code) -->
+        <ImageView
+            android:id="@+id/ivBluetoothIcon"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvConnectionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Searching for devices..."
+            android:textSize="16sp"
+            android:textColor="@color/bdk_text_secondary"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/tvStatusDetail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Make sure your speaker is powered on"
+            android:textSize="13sp"
+            android:textColor="@color/bdk_text_tertiary"
+            android:gravity="center"
+            android:layout_marginTop="8dp" />
+
+        <!-- Progress Indicator -->
+        <ProgressBar
+            android:id="@+id/progressScanning"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="24dp"
+            android:indeterminateTint="@color/bdk_accent_primary" />
+
+        <!-- Device List (shown when multiple devices found) -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardDeviceList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/bdk_background_card"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="AVAILABLE DEVICES"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_tertiary"
+                    android:letterSpacing="0.1"
+                    android:paddingBottom="12dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvDevices"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Retry Button (shown on timeout) -->
+        <Button
+            android:id="@+id/btnRetry"
+            android:layout_width="200dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bdk_btn_primary"
+            android:text="Retry"
+            android:textColor="@color/bdk_text_on_accent"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <!-- Manual Connect Option -->
+        <TextView
+            android:id="@+id/tvManualConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Connect to a different device"
+            android:textSize="14sp"
+            android:textColor="@color/bdk_accent_primary"
+            android:padding="12dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Timeout/Error Overlay -->
+    <FrameLayout
+        android:id="@+id/overlayTimeout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bdk_background_overlay"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="32dp"
+            app:cardBackgroundColor="@color/bdk_background_card"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:gravity="center">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/bdk_ic_bluetooth_off"
+                    android:layout_marginBottom="20dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No Device Found"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/bdk_text_primary"
+                    android:gravity="center"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Make sure your BDK speaker is:\n\n• Powered on\n• In pairing mode (LED blinking)\n• Within Bluetooth range\n• Not connected to another device"
+                    android:textSize="14sp"
+                    android:textColor="@color/bdk_text_secondary"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="24dp" />
+
+                <Button
+                    android:id="@+id/btnOverlayRetry"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bdk_btn_primary"
+                    android:text="Try Again"
+                    android:textColor="@color/bdk_text_on_accent"
+                    android:textSize="16sp"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnOverlayManual"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bdk_btn_secondary"
+                    android:text="Select Manually"
+                    android:textColor="@color/bdk_text_on_accent"
+                    android:textSize="16sp"
+                    android:textAllCaps="false" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </FrameLayout>
+
+</FrameLayout>

@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "MySpeakerControl"
 include(":app")
+include(":shared")
  
